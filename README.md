@@ -7,15 +7,13 @@ This plugin was inspired by the GitHub & BitBucket pull request builder plugins.
 - See this [blogpost](http://blog.nemccarthy.me/?p=387) for more details; http://blog.nemccarthy.me/?p=387 
 
 
-Prerequisites
-================================
+##Prerequisites
 
 - Jenkins 1.532 or higher.
 - Git Plugin - https://wiki.jenkins-ci.org/display/JENKINS/Git+Plugin
 
 
-Creating a Job
-=================================
+##Creating a Job
 
 - Create a new job
 - Select Git SCM
@@ -32,8 +30,8 @@ Creating a Job
 - Supply Repository Name (e.g. myRepo)
 - Save to preserve your changes
 
-Merge the Pull Request's Source Branch into the Target Branch Before Building
-==============================================================================
+##Merge the Pull Request's Source Branch into the Target Branch Before Building
+
 You may want Jenkins to attempt to merge your PR before doing the build -- this way it will find conflicts for you automatically.
 
 - Follow the steps above in "Creating a Job"
@@ -47,20 +45,18 @@ If you are merging into your target branch, you might want Jenkins to do a new b
 - There is a checkbox that says, "Rebuild if destination branch changes?" which enables this check.
 
 
-Rerun test builds
-====================
+##Rerun test builds
+
 
 If you want to rerun pull request test, write *“test this please”* comment to your pull request.
 
 
 
-Copyright
-=============================
+##Copyright
 
 Copyright © 2015 Nathan McCarthy.
 
 
-License
-=============================
+##License
 
 - BSD License
