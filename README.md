@@ -4,6 +4,8 @@ Stash Pull Request Builder Plugin
 This Jenkins plugin builds pull requests from a Atlassian Stash server and will report the test results as a comment.
 This plugin was inspired by the GitHub & BitBucket pull request builder plugins.
 
+- See this [blogpost](http://blog.nemccarthy.me/?p=387) for more details; http://blog.nemccarthy.me/?p=387 
+
 
 Prerequisites
 ================================
@@ -18,7 +20,7 @@ Creating a Job
 - Create a new job
 - Select Git SCM
 - Add Repository URL as bellow
-  - git@stash.org:${projectCode}/${repositoryName}.git
+  - git@myStashHost.com:${projectCode}/${repositoryName}.git
 - In Branch Specifier, type as bellow
   - */${sourceBranch}
 - Under Build Triggers, check Stash Pull Request Builder
