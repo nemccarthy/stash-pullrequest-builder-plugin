@@ -13,12 +13,11 @@
   <packaging>hpi</packaging>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Stash+pullrequest+builder+plugin</url>
 
-  <scm>
-    <connection>scm:git:ssh://git@github.com/jenkinsci/stash-pullrequest-builder-plugin.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/stash-pullrequest-builder-plugin.git</developerConnection>
-    <url>https://github.com/jenkinsci/stash-pullrequest-builder-plugin.git</url>
-    <tag>HEAD</tag>
-  </scm>
+    <scm>
+        <connection>scm:git:ssh://github.com/jenkinsci/stash-pullrequest-builder-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/stash-pullrequest-builder-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/stash-pullrequest-builder-plugin</url>
+    </scm>
   <developers>
     <developer>
       <id>nemccarthy</id>
