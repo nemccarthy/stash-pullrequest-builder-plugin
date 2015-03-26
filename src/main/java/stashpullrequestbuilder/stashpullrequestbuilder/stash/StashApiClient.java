@@ -115,7 +115,7 @@ public class StashApiClient {
     }
 
     private String getRequest(String path) {
-        logger.log(Level.INFO, "PR-GET-REQUEST:" + path);
+        logger.log(Level.FINEST, "PR-GET-REQUEST:" + path);
         HttpClient client = getHttpClient();
         client.getState().setCredentials(AuthScope.ANY, credentials);
         GetMethod httpget = new GetMethod(path);
@@ -129,7 +129,7 @@ public class StashApiClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        logger.log(Level.INFO, "PR-GET-RESPONSE:" + response);
+        logger.log(Level.FINEST, "PR-GET-RESPONSE:" + response);
         return response;
     }
 
@@ -144,11 +144,11 @@ public class StashApiClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        logger.log(Level.INFO, "Delete comment {" + path + "} returned result code; " + res);
+        logger.log(Level.FINE, "Delete comment {" + path + "} returned result code; " + res);
     }
 
     private String postRequest(String path, String comment) throws UnsupportedEncodingException {
-        logger.log(Level.INFO, "PR-POST-REQUEST:" + path + " with: " + comment);
+        logger.log(Level.FINEST, "PR-POST-REQUEST:" + path + " with: " + comment);
         HttpClient client = getHttpClient();
         client.getState().setCredentials(AuthScope.ANY, credentials);
         PostMethod httppost = new PostMethod(path);
@@ -179,7 +179,7 @@ public class StashApiClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        logger.log(Level.INFO, "PR-POST-RESPONSE:" + response);
+        logger.log(Level.FINEST, "PR-POST-RESPONSE:" + response);
         return response;
 
     }
