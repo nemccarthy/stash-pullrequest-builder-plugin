@@ -23,8 +23,8 @@ public class StashBuildListener extends RunListener<AbstractBuild> {
             return;
         }
         trigger.getBuilder().getBuilds().onStarted(abstractBuild);
-    }
-
+    } 
+   
     @Override
     public void onCompleted(AbstractBuild abstractBuild, @Nonnull TaskListener listener) {
         StashBuildTrigger trigger = StashBuildTrigger.getTrigger(abstractBuild.getProject());

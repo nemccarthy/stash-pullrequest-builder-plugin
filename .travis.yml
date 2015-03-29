@@ -1,0 +1,11 @@
+language: java
+jdk:
+  - oraclejdk7
+  - oraclejdk8
+before_install:
+  - mkdir -p ~/.m2
+  - cp sandbox/settings.xml ~/.m2/settings.xml
+script:
+  - mvn package
+notifications:
+  email: false

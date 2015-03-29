@@ -1,4 +1,4 @@
-Stash Pull Request Builder Plugin
+Stash Pull Request Builder Plugin [![Build Status](https://travis-ci.org/nemccarthy/stash-pullrequest-builder-plugin.svg?branch=master)](https://travis-ci.org/nemccarthy/stash-pullrequest-builder-plugin)
 ================================
 
 This Jenkins plugin builds pull requests from a Atlassian Stash server and will report the test results as a comment.
