@@ -1,5 +1,6 @@
 package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 
+import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -9,6 +10,8 @@ import org.codehaus.jackson.annotate.JsonProperty;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StashPullRequestResponseValueRepository {
+    private static final String REFS_PREFIX = "refs/";
+    private static final String HEADS_PREFIX = "heads/";
     private StashPullRequestResponseValueRepositoryRepository repository;
 
     @JsonIgnore
@@ -27,13 +30,40 @@ public class StashPullRequestResponseValueRepository {
     }
 
     @JsonProperty("id")
-    public void setId(String id) { //TODO
+    public void setId(String id) {
         this.id = id;
         this.branch = new StashPullRequestResponseValueRepositoryBranch();
-        String[] ref = id.split("/");
-        if (ref.length > 0) {
-            this.branch.setName(ref[ref.length - 1]);
+        this.branch.setName( convertIdToBranchName(id) );
+    }
+
+    /**
+     * Convert a pull request identifier to a branch name. Assumption: A pull request identifier always looks like
+     * "refs/heads/master". The branch name is without the "refs/heads/" part.
+     * To be on the save side, this method will check for the "refs/" and the "heads/" and strip them accordingly.
+     *
+     * More information about the Stash REST API can be found here:
+     * <a href="https://developer.atlassian.com/stash/docs/latest/">https://developer.atlassian.com/stash/docs/latest/</a>
+     *
+     * @param id The unique name of the pull request.
+     * @return The branch name
+     */
+    private String convertIdToBranchName(String id) {
+        String branchName = StringUtils.EMPTY;
+        if(StringUtils.isEmpty(id)){
+            return branchName;
         }
+
+        branchName = id;
+
+        if(StringUtils.startsWith(branchName, REFS_PREFIX)){
+            branchName = StringUtils.removeStart(branchName, REFS_PREFIX);
+        }
+
+        if(StringUtils.startsWith(branchName, HEADS_PREFIX)){
+            branchName = StringUtils.removeStart(branchName, HEADS_PREFIX);
+        }
+
+        return branchName;
     }
 
     @JsonProperty("latestChangeset")
