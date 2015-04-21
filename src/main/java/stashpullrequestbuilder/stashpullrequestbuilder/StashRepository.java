@@ -164,7 +164,7 @@ public class StashRepository {
                         }
                     }
 
-                    if (content.contains(this.trigger.getTriggerSentence().toLowerCase())) {
+                    if (content.contains(this.trigger.getCiBuildPhrases().toLowerCase())) {
                         shouldBuild = true;
                         break;
                     }
