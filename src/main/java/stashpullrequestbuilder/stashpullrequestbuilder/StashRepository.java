@@ -105,7 +105,7 @@ public class StashRepository {
     }
 
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
-    	
+
         boolean shouldBuild = true;
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
@@ -118,10 +118,10 @@ public class StashRepository {
             String owner = destination.getRepository().getProjectName();
             String repositoryName = destination.getRepository().getRepositoryName();
             String destinationCommit = destination.getCommit().getHash();
-            
+
             String id = pullRequest.getId();
             List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
-            
+
             if (comments != null) {
                 Collections.sort(comments);
                 Collections.reverse(comments);
@@ -154,17 +154,17 @@ public class StashRepository {
                         //first check source commit -- if it doesn't match, just move on. If it does, investigate further.
                         if (sourceCommitMatch.equalsIgnoreCase(sourceCommit)) {
                             // if we're checking destination commits, and if this doesn't match, then move on.
-                            if (this.trigger.getCheckDestinationCommit() 
+                            if (this.trigger.getCheckDestinationCommit()
                                     && (!destinationCommitMatch.equalsIgnoreCase(destinationCommit))) {
                             	continue;
                             }
-                            
+
                             shouldBuild = false;
                             break;
-                        } 
+                        }
                     }
-                    
-                    if (content.contains(BUILD_REQUEST_MARKER.toLowerCase())) {
+
+                    if (content.contains(this.trigger.getTriggerSentence().toLowerCase())) {
                         shouldBuild = true;
                         break;
                     }
