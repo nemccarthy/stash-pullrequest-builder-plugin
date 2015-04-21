@@ -164,7 +164,7 @@ public class StashRepository {
                         }
                     }
 
-                    if (content.toLowerCase().contains(this.trigger.getCiBuildPhrases().trim().toLowerCase())) {
+                    if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
                         shouldBuild = true;
                         break;
                     }
@@ -179,11 +179,15 @@ public class StashRepository {
         if (skipPhrases != null && !"".equals(skipPhrases)) {
             String[] phrases = skipPhrases.split(",");
             for(String phrase : phrases) {
-                if (pullRequestTitle.toLowerCase().contains(phrase.trim().toLowerCase())) {
+                if (isPhrasesContain(pullRequestTitle, phrase)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private boolean isPhrasesContain(String text, String phrase) {
+        return text.toLowerCase().contains(phrase.trim().toLowerCase());
     }
 }
