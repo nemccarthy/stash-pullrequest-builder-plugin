@@ -20,6 +20,9 @@
   <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
     <f:textbox />
   </f:entry>
+  <f:entry title="CI Build Phrases" field="ciBuildPhrases">
+    <f:textbox default="test this please"/>
+  </f:entry>
   <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
     <f:checkbox />
   </f:entry>

@@ -29,8 +29,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String projectCode;
     private final String repositoryName;
     private final String ciSkipPhrases;
+    private final String ciBuildPhrases;
     private final boolean checkDestinationCommit;
-    
+
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
     @Extension
@@ -46,6 +47,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String projectCode,
             String repositoryName,
             String ciSkipPhrases,
+            String ciBuildPhrases,
             boolean checkDestinationCommit
             ) throws ANTLRException {
         super(cron);
@@ -57,6 +59,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.projectCode = projectCode;
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
+        this.ciBuildPhrases = ciBuildPhrases;
         this.checkDestinationCommit = checkDestinationCommit;
     }
 
@@ -91,7 +94,11 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     public String getCiSkipPhrases() {
         return ciSkipPhrases;
     }
-    
+
+    public String getCiBuildPhrases() {
+        return ciBuildPhrases;
+    }
+
     public boolean getCheckDestinationCommit() {
     	return checkDestinationCommit;
     }

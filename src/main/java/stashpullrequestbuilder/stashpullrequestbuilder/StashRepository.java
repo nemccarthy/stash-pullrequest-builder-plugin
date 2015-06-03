@@ -105,7 +105,7 @@ public class StashRepository {
     }
 
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
-    	
+
         boolean shouldBuild = true;
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
@@ -118,10 +118,10 @@ public class StashRepository {
             String owner = destination.getRepository().getProjectName();
             String repositoryName = destination.getRepository().getRepositoryName();
             String destinationCommit = destination.getCommit().getHash();
-            
+
             String id = pullRequest.getId();
             List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
-            
+
             if (comments != null) {
                 Collections.sort(comments);
                 Collections.reverse(comments);
@@ -154,17 +154,17 @@ public class StashRepository {
                         //first check source commit -- if it doesn't match, just move on. If it does, investigate further.
                         if (sourceCommitMatch.equalsIgnoreCase(sourceCommit)) {
                             // if we're checking destination commits, and if this doesn't match, then move on.
-                            if (this.trigger.getCheckDestinationCommit() 
+                            if (this.trigger.getCheckDestinationCommit()
                                     && (!destinationCommitMatch.equalsIgnoreCase(destinationCommit))) {
                             	continue;
                             }
-                            
+
                             shouldBuild = false;
                             break;
-                        } 
+                        }
                     }
-                    
-                    if (content.contains(BUILD_REQUEST_MARKER.toLowerCase())) {
+
+                    if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
                         shouldBuild = true;
                         break;
                     }
@@ -179,11 +179,15 @@ public class StashRepository {
         if (skipPhrases != null && !"".equals(skipPhrases)) {
             String[] phrases = skipPhrases.split(",");
             for(String phrase : phrases) {
-                if (pullRequestTitle.toLowerCase().contains(phrase.trim().toLowerCase())) {
+                if (isPhrasesContain(pullRequestTitle, phrase)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private boolean isPhrasesContain(String text, String phrase) {
+        return text.toLowerCase().contains(phrase.trim().toLowerCase());
     }
 }
