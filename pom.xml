@@ -1,9 +1,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.532</version><!-- which version of Jenkins is this plugin built against? -->
+    <!--
+      Released 2014-03-31, to make plugin compatible with older Jenkins installations.
+      There is an issue with older releases and Java 8 (https://issues.jenkins-ci.org/browse/JENKINS-18537).
+    //-->
+    <version>1.557</version>
   </parent>
 
   <artifactId>stash-pullrequest-builder</artifactId>
@@ -13,16 +18,22 @@
   <packaging>hpi</packaging>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Stash+pullrequest+builder+plugin</url>
 
-    <scm>
-        <connection>scm:git:ssh://github.com/jenkinsci/stash-pullrequest-builder-plugin.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/stash-pullrequest-builder-plugin.git</developerConnection>
-        <url>https://github.com/jenkinsci/stash-pullrequest-builder-plugin</url>
-    </scm>
+  <scm>
+    <connection>scm:git:ssh://github.com/jenkinsci/stash-pullrequest-builder-plugin.git</connection>
+      <developerConnection>scm:git:ssh://git@github.com/jenkinsci/stash-pullrequest-builder-plugin.git</developerConnection>
+      <url>https://github.com/jenkinsci/stash-pullrequest-builder-plugin</url>
+  </scm>
+
   <developers>
     <developer>
       <id>nemccarthy</id>
       <name>nemccarthy</name>
       <email>nem@nemccarthy.me</email>
+    </developer>
+    <developer>
+      <id>tomasbjerre</id>
+      <name>Tomas Bjerre</name>
+      <email>tomas.bjerre85@gmail.com</email>
     </developer>
   </developers>
 
@@ -63,5 +74,4 @@
       <url>http://repo.jenkins-ci.org/public/</url>
     </pluginRepository>
   </pluginRepositories>
-
 </project>

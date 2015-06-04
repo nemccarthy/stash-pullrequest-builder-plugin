@@ -1,24 +1,23 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.Cause;
-import hudson.model.Result;
-import jenkins.model.Jenkins;
 
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import jenkins.model.Jenkins;
 
 /**
  * Created by Nathan McCarthy
  */
 public class StashBuilds {
     private static final Logger logger = Logger.getLogger(StashBuilds.class.getName());
-    private StashBuildTrigger trigger;
-    private StashRepository repository;
+    private final StashRepository repository;
 
-    public StashBuilds(StashBuildTrigger trigger, StashRepository repository) {
-        this.trigger = trigger;
+    public StashBuilds(StashRepository repository) {
         this.repository = repository;
     }
 
@@ -52,11 +51,11 @@ public class StashBuilds {
         String buildUrl = "";
         if (rootUrl == null) {
             buildUrl = " PLEASE SET JENKINS ROOT URL FROM GLOBAL CONFIGURATION " + build.getUrl();
-        }
-        else {
+        } else {
             buildUrl = rootUrl + build.getUrl();
         }
         repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
-        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(), cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber());
+        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
+                cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber());
     }
 }

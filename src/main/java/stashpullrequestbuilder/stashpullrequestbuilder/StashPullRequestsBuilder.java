@@ -1,10 +1,11 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 import hudson.model.AbstractProject;
 
 import java.util.Collection;
 import java.util.logging.Logger;
+
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 
 /**
  * Created by Nathan McCarthy
@@ -36,7 +37,7 @@ public class StashPullRequestsBuilder {
             throw new IllegalStateException();
         }
         this.repository = new StashRepository(this.trigger.getProjectPath(), this);
-        this.builds = new StashBuilds(this.trigger, this.repository);
+        this.builds = new StashBuilds(this.repository);
         return this;
     }
 

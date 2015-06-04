@@ -1,4 +1,4 @@
-Stash Pull Request Builder Plugin
+Stash Pull Request Builder Plugin [![Build Status](https://travis-ci.org/nemccarthy/stash-pullrequest-builder-plugin.svg?branch=master)](https://travis-ci.org/nemccarthy/stash-pullrequest-builder-plugin)
 ================================
 
 [![Join the chat at https://gitter.im/nemccarthy/stash-pullrequest-builder-plugin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/nemccarthy/stash-pullrequest-builder-plugin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
