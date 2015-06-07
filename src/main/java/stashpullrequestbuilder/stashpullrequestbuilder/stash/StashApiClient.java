@@ -41,7 +41,7 @@ public class StashApiClient {
     }
 
     public List<StashPullRequestResponseValue> getPullRequests() {
-        String response = getRequest(apiBaseUrl + this.project + "/repos/" + this.repositoryName + "/pull-requests/");
+        String response = getRequest(pullRequestsPath());
         try {
             return parsePullRequestJson(response).getPrValues();
         } catch(Exception e) {
@@ -74,16 +74,31 @@ public class StashApiClient {
     }
 
     public void deletePullRequestComment(String pullRequestId, String commentId) {
-        String path = apiBaseUrl + this.project + "/repos/" + this.repositoryName + "/pull-requests/" + pullRequestId + "/comments/" + commentId + "?version=0";
+        String path = pullRequestPath(pullRequestId) + "/comments/" + commentId + "?version=0";
         deleteRequest(path);
     }
 
 
     public StashPullRequestComment postPullRequestComment(String pullRequestId, String comment) {
-        String path = apiBaseUrl + this.project + "/repos/" + this.repositoryName + "/pull-requests/" + pullRequestId + "/comments";
+        String path = pullRequestPath(pullRequestId) + "/comments";
         try {
             String response = postRequest(path,  comment);
             return parseSingleCommentJson(response);
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public StashPullRequestMergableResponse getPullRequestMergeStatus(String pullRequestId) {
+        String path = pullRequestPath(pullRequestId) + "/merge";
+        try {
+            String response = getRequest(path);
+            return parsePullRequestMergeStatus(response);
 
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
@@ -215,6 +230,23 @@ public class StashApiClient {
                 response,
                 StashPullRequestComment.class);
         return parsedResponse;
+    }
+
+    protected static StashPullRequestMergableResponse parsePullRequestMergeStatus(String response) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        StashPullRequestMergableResponse parsedResponse;
+        parsedResponse = mapper.readValue(
+                response,
+                StashPullRequestMergableResponse.class);
+        return parsedResponse;
+    }
+
+    private String pullRequestsPath() {
+        return apiBaseUrl + this.project + "/repos/" + this.repositoryName + "/pull-requests/";
+    }
+
+    private String pullRequestPath(String pullRequestId) {
+        return pullRequestsPath() + pullRequestId;
     }
 }
 

@@ -31,6 +31,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String ciSkipPhrases;
     private final String ciBuildPhrases;
     private final boolean checkDestinationCommit;
+    private final boolean checkMergeable;
+    private final boolean checkNotConflicted;
+    private final boolean onlyBuildOnComment;
 
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
@@ -47,8 +50,11 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String projectCode,
             String repositoryName,
             String ciSkipPhrases,
-            String ciBuildPhrases,
-            boolean checkDestinationCommit
+            boolean checkDestinationCommit,
+            boolean checkMergeable,
+            boolean checkNotConflicted,
+            boolean onlyBuildOnComment,
+            String ciBuildPhrases
             ) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
@@ -59,8 +65,11 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.projectCode = projectCode;
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
-        this.ciBuildPhrases = ciBuildPhrases;
+        this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
         this.checkDestinationCommit = checkDestinationCommit;
+        this.checkMergeable = checkMergeable;
+        this.checkNotConflicted = checkNotConflicted;
+        this.onlyBuildOnComment = onlyBuildOnComment;
     }
 
     public String getStashHost() {
@@ -96,7 +105,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public String getCiBuildPhrases() {
-        return ciBuildPhrases;
+        return ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
     }
 
     public boolean getCheckDestinationCommit() {
@@ -164,6 +173,18 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     @Override
     public void stop() {
         super.stop();
+    }
+
+    public boolean isCheckMergeable() {
+        return checkMergeable;
+    }
+
+    public boolean isCheckNotConflicted() {
+        return checkNotConflicted;
+    }
+
+    public boolean isOnlyBuildOnComment() {
+        return onlyBuildOnComment;
     }
 
     public static final class StashBuildTriggerDescriptor extends TriggerDescriptor {

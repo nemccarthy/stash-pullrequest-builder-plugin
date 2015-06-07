@@ -2,6 +2,7 @@ package stashpullrequestbuilder.stashpullrequestbuilder;
 
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
 
@@ -25,10 +26,11 @@ public class StashRepository {
     public static final String BUILD_FINISH_REGEX = "\\[\\*BuildFinished\\* \\*\\*%s\\*\\*\\] ([0-9a-fA-F]+) into ([0-9a-fA-F]+)";
 
     public static final String BUILD_FINISH_SENTENCE = BUILD_FINISH_MARKER + " \n\n **[%s](%s)** - Build #%d";
-    public static final String BUILD_REQUEST_MARKER = "test this please";
+    public static final String BUILD_START_SENTENCE = BUILD_START_MARKER + " \n\n **[%s](%s)** - Build #%d";
 
     public static final String BUILD_SUCCESS_COMMENT =  "✓ BUILD SUCCESS";
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
+    public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
 
     private String projectPath;
     private StashPullRequestsBuilder builder;
@@ -87,11 +89,12 @@ public class StashRepository {
                     pullRequest.getToRef().getCommit().getHash(),
                     commentId);
             this.builder.getTrigger().startJob(cause);
+
         }
     }
 
     public void deletePullRequestComment(String pullRequestId, String commentId) {
-        this.client.deletePullRequestComment(pullRequestId,commentId);
+        this.client.deletePullRequestComment(pullRequestId, commentId);
     }
 
     public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber) {
@@ -104,12 +107,32 @@ public class StashRepository {
         this.client.postPullRequestComment(pullRequestId, comment);
     }
 
+    private Boolean isPullRequestMergable(StashPullRequestResponseValue pullRequest) {
+        if (trigger.isCheckMergeable() || trigger.isCheckNotConflicted()) {
+            StashPullRequestMergableResponse mergable = client.getPullRequestMergeStatus(pullRequest.getId());
+            if (trigger.isCheckMergeable())
+                return  mergable.getCanMerge();
+            if (trigger.isCheckNotConflicted())
+                return !mergable.getConflicted();
+        }
+        return true;
+    }
+
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
 
         boolean shouldBuild = true;
+
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
                 return false;
+            }
+
+            if(!isPullRequestMergable(pullRequest)) {
+                return false;
+            }
+
+            if (trigger.isOnlyBuildOnComment()) {
+                shouldBuild = false;
             }
 
             String sourceCommit = pullRequest.getFromRef().getCommit().getHash();
@@ -188,6 +211,6 @@ public class StashRepository {
     }
 
     private boolean isPhrasesContain(String text, String phrase) {
-        return text.toLowerCase().contains(phrase.trim().toLowerCase());
+        return text != null && text.toLowerCase().contains(phrase.trim().toLowerCase());
     }
 }

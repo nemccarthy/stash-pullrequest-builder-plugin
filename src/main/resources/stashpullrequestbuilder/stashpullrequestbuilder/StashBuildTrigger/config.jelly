@@ -20,10 +20,21 @@
   <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
     <f:textbox />
   </f:entry>
-  <f:entry title="CI Build Phrases" field="ciBuildPhrases">
-    <f:textbox default="test this please"/>
-  </f:entry>
-  <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
-    <f:checkbox />
-  </f:entry>
+  <f:advanced>
+    <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
+      <f:checkbox />
+    </f:entry>
+    <f:entry title="Build only if Stash reports no conflicts?" field="checkNotConflicted">
+      <f:checkbox default="false"/>
+    </f:entry>
+    <f:entry title="Build only if PR is mergeable?" field="checkMergeable">
+      <f:checkbox default="false"/>
+    </f:entry>
+    <f:entry title="Only build when asked (with test phrase)?" field="onlyBuildOnComment">
+      <f:checkbox default="false"/>
+    </f:entry>
+    <f:entry title="CI Build Phrases" field="ciBuildPhrases">
+      <f:textbox default="test this please"/>
+    </f:entry>
+  </f:advanced>
 </j:jelly>
