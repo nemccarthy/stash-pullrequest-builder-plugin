@@ -50,10 +50,15 @@ If you are merging into your target branch, you might want Jenkins to do a new b
 
 ##Rerun test builds
 
-
 If you want to rerun pull request test, write *“test this please”* comment to your pull request.
 
 
+## Post Build Comment
+
+It is possible to add a post build action that gives the option to post additional information to Stash when a build has been either successful or failed.
+These comments can contain environment variables that will be translated when posted to Stash.
+
+This feature can be used to post for instance a url to the deployed application or code coverage at a successful build and why the build failed like what tests that did not pass.
 
 ##Copyright
 

@@ -97,12 +97,14 @@ public class StashRepository {
         this.client.deletePullRequestComment(pullRequestId, commentId);
     }
 
-    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber) {
+    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber, String additionalComment) {
         String message = BUILD_FAILURE_COMMENT;
         if (success){
             message = BUILD_SUCCESS_COMMENT;
         }
         String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber);
+
+        comment = comment.concat(additionalComment);
 
         this.client.postPullRequestComment(pullRequestId, comment);
     }

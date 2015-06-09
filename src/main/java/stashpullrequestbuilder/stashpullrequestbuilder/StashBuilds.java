@@ -57,6 +57,14 @@ public class StashBuilds {
             buildUrl = rootUrl + build.getUrl();
         }
         repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
-        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(), cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber());
+
+        StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
+        String additionalComment = "";
+        if(comments != null) {
+            additionalComment = "\n\n" +
+                    (result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment());
+        }
+
+        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(), cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber(), additionalComment);
     }
 }
