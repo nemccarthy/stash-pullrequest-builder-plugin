@@ -61,8 +61,11 @@ public class StashBuilds {
         StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
         String additionalComment = "";
         if(comments != null) {
-            additionalComment = "\n\n" +
-                    (result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment());
+            String buildComment = result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment();
+
+            if(buildComment != null && !buildComment.isEmpty()) {
+              additionalComment = "\n\n" + buildComment;
+            }
         }
 
         repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(), cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber(), additionalComment);
