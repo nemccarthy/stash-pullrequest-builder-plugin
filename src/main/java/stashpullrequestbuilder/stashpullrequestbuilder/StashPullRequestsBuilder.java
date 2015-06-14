@@ -25,7 +25,7 @@ public class StashPullRequestsBuilder {
     }
 
     public void run() {
-        logger.info("Build Start.");
+        logger.info("PR Build Start.");
         this.repository.init();
         Collection<StashPullRequestResponseValue> targetPullRequests = this.repository.getTargetPullRequests();
         this.repository.addFutureBuildTasks(targetPullRequests);

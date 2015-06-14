@@ -1,17 +1,37 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
 import antlr.ANTLRException;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Descriptor;
+import hudson.model.Item;
+import hudson.model.Job;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -26,6 +46,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String stashHost;
     private final String username;
     private final String password;
+    private final String credentialsId;
     private final String projectCode;
     private final String repositoryName;
     private final String ciSkipPhrases;
@@ -34,6 +55,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean checkMergeable;
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
+    private final StandardUsernamePasswordCredentials credentials;
 
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
@@ -47,6 +69,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String stashHost,
             String username,
             String password,
+            String credentialsId,
             String projectCode,
             String repositoryName,
             String ciSkipPhrases,
@@ -62,6 +85,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.stashHost = stashHost;
         this.username = username;
         this.password = password;
+        this.credentialsId = credentialsId;
         this.projectCode = projectCode;
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
@@ -70,6 +94,19 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.checkMergeable = checkMergeable;
         this.checkNotConflicted = checkNotConflicted;
         this.onlyBuildOnComment = onlyBuildOnComment;
+
+        if (credentialsId != null && credentialsId.trim().length() > 0) {
+            this.credentials = getCredentials();
+        } else {
+            this.credentials = null;
+        }
+
+        if (isCredentialsSupplied()) {
+            logger.info("Using Credentials from Credentials plugin.");
+        }
+        if (!isCredentialsSupplied() || StringUtils.isNotEmpty(username) || StringUtils.isNotEmpty(password)) {
+            logger.warning("Stash credentials not supplied from Credentials plugin, please consider using the Credentials plugin!");
+        }
     }
 
     public String getStashHost() {
@@ -85,11 +122,17 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public String getUsername() {
-        return username;
+        if (isCredentialsSupplied())
+            return credentials.getUsername();
+        else
+            return username;
     }
 
     public String getPassword() {
-        return password;
+        if (isCredentialsSupplied())
+            return Secret.toString(credentials.getPassword());
+        else
+            return password;
     }
 
     public String getProjectCode() {
@@ -187,6 +230,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return onlyBuildOnComment;
     }
 
+    public String getCredentialsId() {
+        return credentialsId;
+    }
+
     public static final class StashBuildTriggerDescriptor extends TriggerDescriptor {
         public StashBuildTriggerDescriptor() {
             load();
@@ -208,4 +255,50 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             return super.configure(req, json);
         }
     }
+
+    private StandardUsernamePasswordCredentials getCredentials() {
+        if (credentialsId != null) {
+            for (StandardUsernamePasswordCredentials c : availableCredentials(this.job, stashHost)) {
+                if (c.getId().equals(credentialsId)) {
+                    return c;
+                }
+            }
+        }
+        return null;
+    }
+
+    private List<? extends StandardUsernamePasswordCredentials> availableCredentials(Job<?,?> owner, String source) {
+        return CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, owner, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build());
+    }
+
+    private boolean isCredentialsSupplied() {
+        return credentialsId != null && credentials != null;
+    }
+
+
+    @Extension
+    public static final class DescriptorImpl extends Descriptor<StashBuildTrigger> {
+
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?,?> owner) {
+            if (owner == null || !owner.hasPermission(Item.CONFIGURE)) {
+                return new ListBoxModel();
+            }
+            return new StandardUsernameListBoxModel().withAll(availableCredentials(owner, stas));
+        }
+
+        public FormValidation doCheckCredentialsId(@QueryParameter("credentialsId") String apiKey) {
+            if (apiKey == null || apiKey.length() == 0) {
+                return FormValidation.error("Missing API Key");
+            }
+            return FormValidation.ok();
+        }
+
+
+        @Override
+        public String getDisplayName() {
+            return "Deployment Notification";
+        }
+    }
+
+
 }
