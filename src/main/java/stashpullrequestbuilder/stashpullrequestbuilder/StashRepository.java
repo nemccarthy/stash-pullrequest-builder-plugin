@@ -6,6 +6,18 @@ import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMer
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
 
+import hudson.EnvVars;
+import hudson.model.Environment;
+import hudson.model.Hudson;
+import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.UserRemoteConfig;
+import hudson.plugins.git.extensions.GitSCMExtension;
+import hudson.plugins.git.extensions.impl.PreBuildMerge;
+import hudson.security.ACL;
+import hudson.slaves.NodeProperty;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,6 +28,18 @@ import java.util.TreeMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.httpclient.UsernamePasswordCredentials;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.protocol.HTTP;
+import org.eclipse.jgit.transport.URIish;
+import org.jenkinsci.plugins.gitclient.GitClient;
+
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 
 /**
  * Created by Nathan McCarthy
@@ -38,30 +62,105 @@ public class StashRepository {
     public static final String ADDITIONAL_PARAMETER_REGEX = "^p:(([A-Za-z_0-9])+)=(.*)";
     public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX);
 
-    private String projectPath;
     private StashPullRequestsBuilder builder;
+    private String targetBranchFilter;
     private StashBuildTrigger trigger;
     private StashApiClient client;
 
-    public StashRepository(String projectPath, StashPullRequestsBuilder builder) {
-        this.projectPath = projectPath;
+    public StashRepository(StashPullRequestsBuilder builder) {
         this.builder = builder;
     }
 
     public void init() {
         trigger = this.builder.getTrigger();
-        client = new StashApiClient(
-                trigger.getStashHost(),
-                trigger.getUsername(),
-                trigger.getPassword(),
-                trigger.getProjectCode(),
-                trigger.getRepositoryName(),
-                trigger.isIgnoreSsl());
+        
+        URIish uri = null;
+        StandardUsernamePasswordCredentials credentials = null;
+        if (StringUtils.isNotBlank(trigger.getTargetBranchFilter()))
+        	targetBranchFilter = trigger.getTargetBranchFilter(); 
+        
+        if (this.builder.getProject().getScm() instanceof GitSCM) {
+        	GitSCM scm = (GitSCM) this.builder.getProject().getScm();
+        	
+        	// retrieve environment variables (so they can be used in hostname)
+        	EnvVars env = new EnvVars(System.getenv());
+    		for (NodeProperty<?> nodeProperty: Hudson.getInstance().getGlobalNodeProperties()) {
+				try {
+					Environment environment = nodeProperty.setUp(null, null, null);
+	                if (environment != null) {
+	                    environment.buildEnvVars(env);
+	                }
+				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+            }
+
+    		// resolve environment variables against each other
+            EnvVars.resolve(env);
+        	
+            // TODO: add support for multiple repositories
+            if (scm.getUserRemoteConfigs().size() > 0) {
+            	UserRemoteConfig config = scm.getUserRemoteConfigs().get(0);
+            	try {
+	            	// retrieve host from SCM config && expand using previously searched environment variables
+	            	uri = new URIish(env.expand(config.getUrl()));
+				} catch (URISyntaxException e) {
+					throw new IllegalStateException("invalid stash uri in SCM configuration", e);
+				}
+            	
+            	// get target branch if option is selected and isn't overridden by trigger configuration
+            	if (trigger.isCheckMergeBeforeBuild() && StringUtils.isBlank(trigger.getTargetBranchFilter())) {
+	        		for (GitSCMExtension extension : scm.getExtensions().toList()) {
+	        			if (extension instanceof PreBuildMerge) {
+	        				PreBuildMerge preBuildMerge = (PreBuildMerge) extension;
+	        				targetBranchFilter = env.expand(preBuildMerge.getOptions().getMergeTarget());
+	        				break;
+	        			}
+	        		}
+            	}
+            	
+            	if ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme())) {
+	            	// get credentials from credentials provider if url is HTTP/HTTPS
+            		// if not, it's no use to get them since they will be different for HTTP/HTTPS
+            		// which is required for REST calls to Stash
+	                if (config.getCredentialsId() != null) {
+	                	credentials = CredentialsMatchers.firstOrNull(
+	                    		CredentialsProvider.lookupCredentials(
+	                    				StandardUsernamePasswordCredentials.class, this.builder.getProject(),
+	                    				ACL.SYSTEM, URIRequirementBuilder.fromUri(uri.toString()).build()
+	                    		), CredentialsMatchers.allOf(
+	                    				CredentialsMatchers.withId(config.getCredentialsId()), GitClient.CREDENTIALS_MATCHER
+	                    		)
+	                    );
+	                }
+	                
+	                client = new StashApiClient(uri, credentials);
+            	} else {
+            		// retrieve host from trigger && expand using previously searched environment variables
+            		client = new StashApiClient(
+            				env.expand(trigger.getStashHost()),
+            				uri, 
+            				new UsernamePasswordCredentials(
+            						env.expand(trigger.getStashUsername()), 
+            						env.expand(trigger.getStashPassword())
+            				)
+            			);
+            	}
+            } else {
+            	throw new IllegalStateException("No remote configuration provided for Git SCM");
+            }
+        }
+        
+        if (client == null)
+        	throw new IllegalStateException("Stash API client wasn't initialized");
     }
 
     public Collection<StashPullRequestResponseValue> getTargetPullRequests() {
-        logger.info("Fetch PullRequests.");
+        logger.info("Fetching pull requests ...");
         List<StashPullRequestResponseValue> pullRequests = client.getPullRequests();
+        logger.info("Found " + pullRequests.size() + " pull requests");
         List<StashPullRequestResponseValue> targetPullRequests = new ArrayList<StashPullRequestResponseValue>();
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
             if (isBuildTarget(pullRequest)) {
@@ -139,9 +238,10 @@ public class StashRepository {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
             String commentId = postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
-                    trigger.getStashHost(),
+                    client.getHost(),
                     pullRequest.getFromRef().getBranch().getName(),
                     pullRequest.getToRef().getBranch().getName(),
+                    "*/pr/" + pullRequest.getId() + "/from",
                     pullRequest.getFromRef().getRepository().getProjectName(),
                     pullRequest.getFromRef().getRepository().getRepositoryName(),
                     pullRequest.getId(),
@@ -187,12 +287,18 @@ public class StashRepository {
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
 
         boolean shouldBuild = true;
-
+        logger.fine("Verifying " + pullRequest);
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
                 return false;
             }
-
+            
+            if(!isAllowedTargetBranch(pullRequest.getToRef().getBranch().getName())) {
+            	logger.info("skipping trigger, " + pullRequest.getToRef().getBranch().getName() + 
+            			" doesn't match " + targetBranchFilter);
+            	return false;
+            }
+            
             if(!isPullRequestMergable(pullRequest)) {
                 return false;
             }
@@ -274,6 +380,13 @@ public class StashRepository {
             }
         }
         return false;
+    }
+
+    private boolean isAllowedTargetBranch(String pullRequestToBranch) {
+        if (StringUtils.isNotBlank(targetBranchFilter)) {
+        	return pullRequestToBranch.matches(targetBranchFilter);
+        }
+        return true;
     }
 
     private boolean isPhrasesContain(String text, String phrase) {
