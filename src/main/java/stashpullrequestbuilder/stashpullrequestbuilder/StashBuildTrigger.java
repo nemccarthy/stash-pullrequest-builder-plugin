@@ -120,17 +120,18 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public QueueTaskFuture<?> startJob(StashCause cause) {
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
-        values.put("sourceBranch", new StringParameterValue("sourceBranch", cause.getSourceBranch()));
-        values.put("targetBranch", new StringParameterValue("targetBranch", cause.getTargetBranch()));
-        values.put("pullRequest", new StringParameterValue("pullRequest", cause.getPullRequestBranch()));
-        values.put("projectCode", new StringParameterValue("projectCode", cause.getRepositoryOwner()));
-        values.put("repositoryName", new StringParameterValue("repositoryName", cause.getRepositoryName()));
-        values.put("pullRequestId", new StringParameterValue("pullRequestId", cause.getPullRequestId()));
-        values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
-        values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
-        values.put("pullRequestTitle", new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
-        return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList<ParameterValue>(values.values())));
+    	ArrayList<ParameterValue> parameterList = new ArrayList<ParameterValue>();
+    	parameterList.add(new StringParameterValue("sourceProject", cause.getRepositoryOwner()));
+    	parameterList.add(new StringParameterValue("sourceRepository", cause.getRepositoryName()));
+    	parameterList.add(new StringParameterValue("sourceBranch", cause.getSourceBranch()));
+    	parameterList.add(new StringParameterValue("targetProject", cause.getDestinationRepositoryOwner()));
+    	parameterList.add(new StringParameterValue("targetRepository", cause.getDestinationRepositoryName()));
+    	parameterList.add(new StringParameterValue("targetBranch", cause.getTargetBranch()));
+    	parameterList.add(new StringParameterValue("pullRequest", cause.getPullRequestBranch()));
+        parameterList.add(new StringParameterValue("pullRequestId", cause.getPullRequestId()));
+    	parameterList.add(new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
+    	parameterList.add(new StringParameterValue("pullRequestCommit", cause.getSourceCommitHash()));
+    	return this.job.scheduleBuild2(0, cause, new ParametersAction(parameterList));
     }
 
     @Override
