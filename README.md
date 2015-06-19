@@ -52,7 +52,7 @@ If you are merging into your target branch, you might want Jenkins to do a new b
 
 ##Notify Stash Instance (StashNotifier plugin)
 
-If you have enabled the 'Notify Stash Instance' Post-build Action and also enabled 'Merge before build', you need to set '${sourceCommitHash}' as Commit SHA-1.  This will record the build result against the source commit.
+If you have enabled the 'Notify Stash Instance' Post-build Action and also enabled 'Merge before build', you need to set '${pullRequestCommit}' as Commit SHA-1.  This will record the build result against the source commit.
 
 ##Rerun test builds
 
