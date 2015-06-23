@@ -20,17 +20,14 @@ This plugin was inspired by the GitHub & BitBucket pull request builder plugins.
 
 - Create a new job
 - Select Git SCM
-- Add Repository URL as bellow
-  - git@myStashHost.com:${projectCode}/${repositoryName}.git
+- Add Repository URL
+	- Choose credentials (will be used by trigger)
+	- Set refspec to: +refs/pull-requests/*:refs/remotes/origin/pr/*
 - In Branch Specifier, type as bellow
-  - */${sourceBranch}
+  - ${pullRequest}
 - Under Build Triggers, check Stash Pull Request Builder
 - In Cron, enter crontab for this job.
   - e.g. every minute: * * * * *
-- In Stash BasicAuth Username - Stash username like jenkins-buildbot
-- In Stash BasicAuth Password - Jenkins Build Bot password
-- Supply project code (this is the abbreviated project code, e.g. PRJ)
-- Supply Repository Name (e.g. myRepo)
 - Save to preserve your changes
 
 ##Merge the Pull Request's Source Branch into the Target Branch Before Building
@@ -40,13 +37,17 @@ You may want Jenkins to attempt to merge your PR before doing the build -- this 
 - Follow the steps above in "Creating a Job"
 - In the "Source Code Management" > "Git" > "Additional Behaviors" section, click "Add" > "Merge Before Building"
 - In "Name of Repository" put "origin" (or, if not using default name, use your remote repository's name. Note: unlike in the main part of the Git Repository config, you cannot leave this item blank for "default".)
-- In "Branch to merge to" put "${targetBranch}" 
+- In "Branch to merge to" put the target branch you want to merge to 
 - Note that as long as you don't push these changes to your remote repository, the merge only happens in your local repository.
 
+By default it will only accept pull requests that match the target branch specified as target branch in the 'Merge before build' extension. You can choose to disable this or choose an custom filter to limit the number of pull requests being verified. Both options are available in the advanced tab.
 
 If you are merging into your target branch, you might want Jenkins to do a new build of the Pull Request when the target branch changes.
 - There is a checkbox that says, "Rebuild if destination branch changes?" which enables this check.
 
+##Notify Stash instance
+
+If you have enabled the 'Notify Stash Instance' Post-build Action and also enabled the 'Merge before build' extension you need to add '${pullRequestCommit}' as Commit SHA-1. Otherwise you'll notify Stash with the commit hash resulting from the merge which isn't known to Stash (since it's merged locally).
 
 ##Rerun test builds
 

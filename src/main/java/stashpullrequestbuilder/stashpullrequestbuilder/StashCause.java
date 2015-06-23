@@ -8,6 +8,7 @@ import hudson.model.Cause;
 public class StashCause extends Cause {
     private final String sourceBranch;
     private final String targetBranch;
+    private final String pullRequestBranch;
     private final String repositoryOwner;
     private final String repositoryName;
     private final String pullRequestId;
@@ -22,6 +23,7 @@ public class StashCause extends Cause {
     public StashCause(String stashHost,
                           String sourceBranch,
                           String targetBranch,
+                          String pullRequestBranch,
                           String repositoryOwner,
                           String repositoryName,
                           String pullRequestId,
@@ -33,6 +35,7 @@ public class StashCause extends Cause {
                           String buildStartCommentId) {
         this.sourceBranch = sourceBranch;
         this.targetBranch = targetBranch;
+        this.pullRequestBranch = pullRequestBranch;
         this.repositoryOwner = repositoryOwner;
         this.repositoryName = repositoryName;
         this.pullRequestId = pullRequestId;
@@ -52,7 +55,11 @@ public class StashCause extends Cause {
         return targetBranch;
     }
 
-    public String getRepositoryOwner() {
+    public String getPullRequestBranch() {
+		return pullRequestBranch;
+	}
+
+	public String getRepositoryOwner() {
         return repositoryOwner;
     }
 
@@ -87,7 +94,7 @@ public class StashCause extends Cause {
     public String getShortDescription() {
         return "<a href=\"" + stashHost + "/projects/" + this.getDestinationRepositoryOwner() + "/repos/" +
                 this.getDestinationRepositoryName() + "/pull-requests/" + this.getPullRequestId() +
-                "\" >PR #" + this.getPullRequestId() + " " + this.getPullRequestTitle() + " </a>";
+                "/overview\" >PR #" + this.getPullRequestId() + " " + this.getPullRequestTitle() + " </a>";
     }
 }
 
