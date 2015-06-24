@@ -25,7 +25,7 @@ public class StashPullRequestsBuilder {
     }
 
     public void run() {
-        logger.info("Build for " + project.getDisplayName() + " started");
+        logger.info("Build Start.");
         this.repository.init();
         Collection<StashPullRequestResponseValue> targetPullRequests = this.repository.getTargetPullRequests();
         this.repository.addFutureBuildTasks(targetPullRequests);
@@ -35,7 +35,7 @@ public class StashPullRequestsBuilder {
         if (this.project == null || this.trigger == null) {
             throw new IllegalStateException();
         }
-        this.repository = new StashRepository(this);
+        this.repository = new StashRepository(this.trigger.getProjectPath(), this);
         this.builds = new StashBuilds(this.trigger, this.repository);
         return this;
     }

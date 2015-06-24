@@ -105,11 +105,6 @@ public class StashPullRequestResponseValueRepository {
     public void setCommit(StashPullRequestResponseValueRepositoryCommit commit) {
         this.commit = commit;
     }
-    
-    @Override
-    public String toString() {
-    	return branch.getName() + " (id: " + id + ", commit: " + commit.getHash() + ", latestChangeset: " + latestChangeset + ")"; 
-    }
 }
 
 

@@ -114,17 +114,4 @@ public class StashPullRequestResponseValue {
         this.id = id;
     }
 
-    @Override
-    public String toString() {
-    	return "pullrequest: " + title + " (#" + id + ")" +
-    			"\n" + "  - to: " + toRef +
-    			"\n" + "  - from: " + fromRef +
-    			"\n" + "  - locked: " + locked +
-    			"\n" + "  - closed: " + closed +
-    			"\n" + "  - state: " + state +
-    			"\n" + "  - createdDate: " + createdDate +
-    			"\n" + "  - updatedDate: " + updatedDate +
-    			"\n" + "  - description: " + description;
-    }
-
 }
