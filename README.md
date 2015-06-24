@@ -45,9 +45,6 @@ By default it will only accept pull requests that match the target branch specif
 If you are merging into your target branch, you might want Jenkins to do a new build of the Pull Request when the target branch changes.
 - There is a checkbox that says, "Rebuild if destination branch changes?" which enables this check.
 
-##Notify Stash instance
-
-If you have enabled the 'Notify Stash Instance' Post-build Action and also enabled the 'Merge before build' extension you need to add '${pullRequestCommit}' as Commit SHA-1. Otherwise you'll notify Stash with the commit hash resulting from the merge which isn't known to Stash (since it's merged locally).
 
 ##Rerun test builds
 
