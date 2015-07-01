@@ -10,7 +10,7 @@
       <f:textbox />
   	</f:entry>
     <f:entry title="Build only 'Merge before build' target branch?" field="checkMergeBeforeBuild">
-      <f:checkbox checked="true" />
+      <f:checkbox default="true" />
     </f:entry>
     <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
       <f:checkbox />
