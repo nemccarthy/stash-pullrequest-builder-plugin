@@ -25,7 +25,10 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.protocol.HTTP;
 import org.eclipse.jgit.transport.URIish;
 import org.jenkinsci.plugins.gitclient.GitClient;
 
@@ -94,10 +97,10 @@ public class StashRepository {
             if (scm.getUserRemoteConfigs().size() > 0) {
             	UserRemoteConfig config = scm.getUserRemoteConfigs().get(0);
             	try {
-	            	// retrieve host && expand using previously searched environment variables
+	            	// retrieve host from SCM config && expand using previously searched environment variables
 	            	uri = new URIish(env.expand(config.getUrl()));
 				} catch (URISyntaxException e) {
-					throw new IllegalStateException("invalid stash uri", e);
+					throw new IllegalStateException("invalid stash uri in SCM configuration", e);
 				}
             	
             	// get target branch if option is selected and isn't overridden by trigger configuration
@@ -111,21 +114,40 @@ public class StashRepository {
 	        		}
             	}
             	
-            	// set credentials
-                if (config.getCredentialsId() != null) {
-                	credentials = CredentialsMatchers.firstOrNull(
-                    		CredentialsProvider.lookupCredentials(
-                    				StandardUsernamePasswordCredentials.class, this.builder.getProject(),
-                    				ACL.SYSTEM, URIRequirementBuilder.fromUri(uri.toString()).build()
-                    		), CredentialsMatchers.allOf(
-                    				CredentialsMatchers.withId(config.getCredentialsId()), GitClient.CREDENTIALS_MATCHER
-                    		)
-                    );
-                }
+            	if ("http".equals(uri.getScheme()) || "https".equals(uri.getScheme())) {
+	            	// get credentials from credentials provider if url is HTTP/HTTPS
+            		// if not, it's no use to get them since they will be different for HTTP/HTTPS
+            		// which is required for REST calls to Stash
+	                if (config.getCredentialsId() != null) {
+	                	credentials = CredentialsMatchers.firstOrNull(
+	                    		CredentialsProvider.lookupCredentials(
+	                    				StandardUsernamePasswordCredentials.class, this.builder.getProject(),
+	                    				ACL.SYSTEM, URIRequirementBuilder.fromUri(uri.toString()).build()
+	                    		), CredentialsMatchers.allOf(
+	                    				CredentialsMatchers.withId(config.getCredentialsId()), GitClient.CREDENTIALS_MATCHER
+	                    		)
+	                    );
+	                }
+	                
+	                client = new StashApiClient(uri, credentials);
+            	} else {
+            		// retrieve host from trigger && expand using previously searched environment variables
+            		client = new StashApiClient(
+            				env.expand(trigger.getStashHost()),
+            				uri, 
+            				new UsernamePasswordCredentials(
+            						env.expand(trigger.getStashUsername()), 
+            						env.expand(trigger.getStashPassword())
+            				)
+            			);
+            	}
+            } else {
+            	throw new IllegalStateException("No remote configuration provided for Git SCM");
             }
         }
         
-        client = new StashApiClient(uri, credentials);
+        if (client == null)
+        	throw new IllegalStateException("Stash API client wasn't initialized");
     }
 
     public Collection<StashPullRequestResponseValue> getTargetPullRequests() {

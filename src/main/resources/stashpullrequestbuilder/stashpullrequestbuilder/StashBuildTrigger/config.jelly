@@ -6,6 +6,15 @@
     <f:textbox />
   </f:entry>
   <f:advanced>
+  	<f:entry title="Stash Host" field="stashHost">
+      <f:textbox />
+    </f:entry>
+  	<f:entry title="Stash BasicAuth Username" field="stashUsername">
+      <f:textbox />
+  	</f:entry>
+  	<f:entry title="Stash BasicAuth Password" field="stashPassword">
+      <f:password />
+  	</f:entry>
   	<f:entry title="Target branch filter" field="targetBranchFilter">
       <f:textbox />
   	</f:entry>

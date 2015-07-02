@@ -30,6 +30,11 @@ This plugin was inspired by the GitHub & BitBucket pull request builder plugins.
   - e.g. every minute: * * * * *
 - Save to preserve your changes
 
+##SSH Stash url in Git SCM
+
+If you use a SSH Stash url in the Git SCM you will have to set host, username and password in the advanced section 
+of the plugin configuration. Reason is that the plugin calls the Stash REST API which is HTTP by definition.
+
 ##Merge the Pull Request's Source Branch into the Target Branch Before Building
 
 You may want Jenkins to attempt to merge your PR before doing the build -- this way it will find conflicts for you automatically.

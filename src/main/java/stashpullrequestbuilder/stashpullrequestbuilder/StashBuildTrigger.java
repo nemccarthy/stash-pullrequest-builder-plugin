@@ -25,6 +25,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private static final Logger logger = Logger.getLogger(StashBuildTrigger.class.getName());
     private final String projectPath;
     private final String cron;
+    private final String stashHost;
+    private final String stashUsername;
+    private final String stashPassword;
     private final String targetBranchFilter;
     private final String ciSkipPhrases;
     private final String ciBuildPhrases;
@@ -43,6 +46,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     public StashBuildTrigger(
             String projectPath,
             String cron,
+            String stashHost,
+            String stashUsername,
+            String stashPassword,
             String targetBranchFilter,
             String ciSkipPhrases,
             boolean checkMergeBeforeBuild,
@@ -55,6 +61,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         super(cron);
         this.projectPath = projectPath;
         this.cron = cron;
+        this.stashHost = stashHost;
+        this.stashUsername = stashUsername;
+        this.stashPassword = stashPassword;
         this.targetBranchFilter = targetBranchFilter;
         this.ciSkipPhrases = ciSkipPhrases;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
@@ -73,7 +82,19 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return this.cron;
     }
 
-    public String getTargetBranchFilter() {
+    public String getStashHost() {
+		return stashHost;
+	}
+
+	public String getStashUsername() {
+		return stashUsername;
+	}
+
+	public String getStashPassword() {
+		return stashPassword;
+	}
+
+	public String getTargetBranchFilter() {
 		return targetBranchFilter;
 	}
 

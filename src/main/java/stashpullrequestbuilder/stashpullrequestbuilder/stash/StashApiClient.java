@@ -36,22 +36,23 @@ public class StashApiClient {
     private final Credentials credentials;
 
     public StashApiClient(URIish stashUri, StandardUsernamePasswordCredentials credentials) {
-    	if (credentials != null) {
-	        this.credentials = new UsernamePasswordCredentials(
-	        		credentials.getUsername(), 
-	        		credentials.getPassword().getPlainText());
-    	} else {
-    		this.credentials = null;
-    	}
-        
-        if (stashUri == null || !stashUri.getPath().startsWith("/scm/")) {
+        this(null, stashUri, credentials == null ? null : new UsernamePasswordCredentials(
+        		credentials.getUsername(), 
+        		credentials.getPassword().getPlainText()));
+    }
+    
+    public StashApiClient(String host, URIish stashUri, UsernamePasswordCredentials credentials) {
+    	// validate stash uri
+    	if (stashUri == null || !stashUri.getPath().startsWith("/scm/")) {
         	throw new IllegalArgumentException("Invalid stash URI " + stashUri);
         }
-        
+    	
+        this.credentials = credentials;
         // split on / after removing prefix /scm/ should give the project name as first entry       
         this.project = stashUri.getPath().substring(5).split("/")[0];
         this.repositoryName = stashUri.getHumanishName();
-        this.host = stashUri.getScheme() + "://" + stashUri.getHost() +	(stashUri.getPort() != -1 ? ":" + stashUri.getPort() : "");
+        // override host if provided
+        this.host = host != null ? host : stashUri.getScheme() + "://" + stashUri.getHost() +	(stashUri.getPort() != -1 ? ":" + stashUri.getPort() : "");
         this.apiBaseUrl = this.host + "/rest/api/1.0/projects/";
     }
     
