@@ -41,7 +41,7 @@ public class StashApiClient {
     }
 
     public List<StashPullRequestResponseValue> getPullRequests() {
-        String response = getRequest(pullRequestsPath());
+        String response = getRequest(pullRequestsPath() + "?order=NEWEST");
         try {
             return parsePullRequestJson(response).getPrValues();
         } catch(Exception e) {
