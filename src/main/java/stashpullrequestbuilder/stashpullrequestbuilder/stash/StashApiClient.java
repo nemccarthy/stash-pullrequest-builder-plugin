@@ -9,10 +9,13 @@ import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.io.IOUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -139,7 +142,10 @@ public class StashApiClient {
         String response = null;
         try {
             client.executeMethod(httpget);
-            response = httpget.getResponseBodyAsString();
+            InputStream responseBodyAsStream = httpget.getResponseBodyAsStream();
+            StringWriter stringWriter = new StringWriter();
+            IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
+            response = stringWriter.toString();
         } catch (HttpException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -187,7 +193,10 @@ public class StashApiClient {
         String response = "";
         try {
             client.executeMethod(httppost);
-            response = httppost.getResponseBodyAsString();
+            InputStream responseBodyAsStream = httppost.getResponseBodyAsStream();
+            StringWriter stringWriter = new StringWriter();
+            IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
+            response = stringWriter.toString();
             logger.info("API Request Response: " + response);
         } catch (HttpException e) {
             e.printStackTrace();
