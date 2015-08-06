@@ -141,6 +141,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public QueueTaskFuture<?> startJob(StashCause cause) {
+    	logger.info("Scheduling build for " + cause.getShortDescription());
     	ArrayList<ParameterValue> parameterList = new ArrayList<ParameterValue>();
     	parameterList.add(new StringParameterValue("sourceProject", cause.getRepositoryOwner()));
     	parameterList.add(new StringParameterValue("sourceRepository", cause.getRepositoryName()));
