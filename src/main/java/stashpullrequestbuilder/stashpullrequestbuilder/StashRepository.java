@@ -241,7 +241,7 @@ public class StashRepository {
                     client.getHost(),
                     pullRequest.getFromRef().getBranch().getName(),
                     pullRequest.getToRef().getBranch().getName(),
-                    "*/pr/" + pullRequest.getId() + "/from",
+                    "origin/pr/" + pullRequest.getId() + "/from",
                     pullRequest.getFromRef().getRepository().getProjectName(),
                     pullRequest.getFromRef().getRepository().getRepositoryName(),
                     pullRequest.getId(),
@@ -289,17 +289,20 @@ public class StashRepository {
         boolean shouldBuild = true;
         logger.fine("Verifying " + pullRequest);
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
+        	String prefix = "PR #" + pullRequest.getId() + " " + pullRequest.getTitle() + " (" + pullRequest.getToRef().getRepository().getRepositoryName() + ") -> ";
             if (isSkipBuild(pullRequest.getTitle())) {
+            	logger.fine(prefix + "skipping trigger, pull request title matches ci skip phrases");
                 return false;
             }
             
             if(!isAllowedTargetBranch(pullRequest.getToRef().getBranch().getName())) {
-            	logger.info("skipping trigger, " + pullRequest.getToRef().getBranch().getName() + 
-            			" doesn't match " + targetBranchFilter);
+            	logger.fine(prefix + "skipping trigger, pull request target branch " + pullRequest.getToRef().getBranch().getName() + 
+            			" doesn't match filter " + targetBranchFilter);
             	return false;
             }
             
             if(!isPullRequestMergable(pullRequest)) {
+            	logger.fine(prefix + "skipping trigger, pull request is not mergeable");
                 return false;
             }
 
@@ -320,8 +323,10 @@ public class StashRepository {
             if (comments != null) {
                 Collections.sort(comments);
                 Collections.reverse(comments);
+                boolean foundComment = false;
                 for (StashPullRequestComment comment : comments) {
-                    String content = comment.getText();
+                	String content = comment.getText();
+                	logger.fine(prefix + "verifying comment: " + content);
                     if (content == null || content.isEmpty()) {
                         continue;
                     }
@@ -353,17 +358,27 @@ public class StashRepository {
                                     && (!destinationCommitMatch.equalsIgnoreCase(destinationCommit))) {
                             	continue;
                             }
-
+                            
+                            logger.fine(prefix + "skipping trigger, pull request already built");
+                            foundComment = true;
                             shouldBuild = false;
                             break;
                         }
                     }
 
                     if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
+                    	logger.fine(prefix + "build phrase identified, adding trigger");
                         shouldBuild = true;
+                        foundComment = true;
                         break;
                     }
                 }
+                
+                if (!foundComment)
+                	logger.fine(prefix + "skipping trigger, nothing found in comments");
+                
+            } else if (trigger.isOnlyBuildOnComment()) {
+            	logger.fine(prefix + "skipping trigger, no comments and trigger only builds on comments");
             }
         }
         return shouldBuild;
@@ -375,7 +390,7 @@ public class StashRepository {
             String[] phrases = skipPhrases.split(",");
             for(String phrase : phrases) {
                 if (isPhrasesContain(pullRequestTitle, phrase)) {
-                    return true;
+                	return true;
                 }
             }
         }
