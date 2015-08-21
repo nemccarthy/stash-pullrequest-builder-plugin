@@ -17,9 +17,9 @@ public class StashPullRequestActivityResponse {
     @JsonProperty("size")
     private Integer size;//
 
-    private boolean isLastPage;
+    private Boolean isLastPage;
 
-    private int nextPageStart;
+    private Integer nextPageStart;
 
     @JsonProperty("values")
     public List<StashPullRequestActivity> getPrValues() {
