@@ -21,6 +21,9 @@
     <f:textbox />
   </f:entry>
   <f:advanced>
+    <f:entry title="Ignore ssl certificates?" field="ignoreSsl">
+      <f:checkbox />
+    </f:entry>
     <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
       <f:checkbox />
     </f:entry>
