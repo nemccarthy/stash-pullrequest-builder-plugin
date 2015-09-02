@@ -17,6 +17,10 @@ public class StashPullRequestResponse {
 
     private int size;//
 
+    private boolean isLastPage;
+
+    private int nextPageStart;
+
 //    @JsonProperty("pagelen")
 //    public int getPageLength() {
 //        return pageLength;
@@ -55,6 +59,14 @@ public class StashPullRequestResponse {
     @JsonProperty("size")
     public void setSize(int size) {
         this.size = size;
+    }
+
+    public boolean getIsLastPage() {
+        return isLastPage;
+    }
+
+    public int getNextPageStart() {
+        return nextPageStart;
     }
 
 }
