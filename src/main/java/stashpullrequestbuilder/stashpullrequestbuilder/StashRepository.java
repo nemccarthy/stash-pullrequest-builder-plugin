@@ -6,10 +6,13 @@ import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMer
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,6 +34,9 @@ public class StashRepository {
     public static final String BUILD_SUCCESS_COMMENT =  "✓ BUILD SUCCESS";
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
     public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
+
+    public static final String ADDITIONAL_PARAMETER_REGEX = "\\b(([A-Za-z_])+)=(.*)";
+    public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX, Pattern.CASE_INSENSITIVE);
 
     private String projectPath;
     private StashPullRequestsBuilder builder;
@@ -72,8 +78,64 @@ public class StashRepository {
             return commentResponse.getCommentId().toString();
     }
 
+    public static AbstractMap.SimpleEntry<String,String> getParameter(String content){
+    	if(content.isEmpty()){
+    		return null;
+    	}
+        Matcher parameterMatcher = ADDITIONAL_PARAMETER_REGEX_PATTERN.matcher(content);
+        if(parameterMatcher.find(0)){
+        	String parameterName = parameterMatcher.group(1);
+        	String parameterValue = parameterMatcher.group(3);
+        	return new AbstractMap.SimpleEntry<String,String>(parameterName, parameterValue);
+        }
+        return null;
+    }
+    
+    public static Map<String, String> getParametersFromContent(String content){
+        Map<String, String> result = new TreeMap<String, String>();
+		String lines[] = content.split("\\r?\\n");
+		for(String line : lines){
+			AbstractMap.SimpleEntry<String,String> parameter = getParameter(line);
+			if(parameter != null){
+				result.put(parameter.getKey(), parameter.getValue());
+			}
+		}
+        
+        return result;
+   }
+    
+    public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest){
+        StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+        String owner = destination.getRepository().getProjectName();
+        String repositoryName = destination.getRepository().getRepositoryName();
+
+        String id = pullRequest.getId();
+        List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
+        if (comments != null) {
+            Collections.sort(comments);
+//          Collections.reverse(comments);
+
+            Map<String, String> result = new TreeMap<String, String>();
+            
+            for (StashPullRequestComment comment : comments) {
+                String content = comment.getText();
+                if (content == null || content.isEmpty()) {
+                    continue;
+                }
+
+                Map<String,String> parameters = getParametersFromContent(content);
+                for(String key : parameters.keySet()){
+                	result.put(key, parameters.get(key));
+                }
+            }
+            return result;
+        }
+        return null;
+    }
+    
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
+        	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
             String commentId = postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
@@ -87,7 +149,8 @@ public class StashRepository {
                     pullRequest.getTitle(),
                     pullRequest.getFromRef().getCommit().getHash(),
                     pullRequest.getToRef().getCommit().getHash(),
-                    commentId);
+                    commentId,
+                    additionalParameters);
             this.builder.getTrigger().startJob(cause);
 
         }
