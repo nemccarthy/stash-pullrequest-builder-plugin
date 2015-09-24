@@ -42,5 +42,14 @@
     <f:entry title="CI Build Phrases" field="ciBuildPhrases">
       <f:textbox default="test this please"/>
     </f:entry>
+    <f:entry title="Report build started to Stash?" field="reportBuildStartedToStash">
+      <f:checkbox default="true"/>
+    </f:entry>
+    <f:entry title="Delete build started to Stash?" field="deleteBuildStartedToStash">
+      <f:checkbox default="true"/>
+    </f:entry>
+    <f:entry title="Report build result to Stash?" field="reportBuildStatusToStash">
+      <f:checkbox default="true"/>
+    </f:entry>
   </f:advanced>
 </j:jelly>

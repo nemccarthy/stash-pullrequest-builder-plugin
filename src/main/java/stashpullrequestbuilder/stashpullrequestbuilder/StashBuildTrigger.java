@@ -45,6 +45,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean checkMergeable;
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
+    private final boolean reportBuildStartedToStash;
+    private final boolean deleteBuildStartedToStash;
+    private final boolean reportBuildStatusToStash;
     private final boolean deletePreviousBuildFinishComments;
 
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
@@ -66,6 +69,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             boolean checkMergeable,
             boolean checkNotConflicted,
             boolean onlyBuildOnComment,
+            boolean reportBuildStartedToStash,
+            boolean deleteBuildStartedToStash,
+            boolean reportBuildStatusToStash,
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
             String targetBranchesToBuild
@@ -84,6 +90,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.checkMergeable = checkMergeable;
         this.checkNotConflicted = checkNotConflicted;
         this.onlyBuildOnComment = onlyBuildOnComment;
+        this.reportBuildStartedToStash = reportBuildStartedToStash;
+        this.deleteBuildStartedToStash = deleteBuildStartedToStash;
+        this.reportBuildStatusToStash = reportBuildStatusToStash;
         this.deletePreviousBuildFinishComments = deletePreviousBuildFinishComments;
         this.targetBranchesToBuild = targetBranchesToBuild;
     }
@@ -142,6 +151,18 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public boolean isIgnoreSsl() {
         return ignoreSsl;
+    }
+
+    public boolean getReportBuildStartedToStash() {
+        return reportBuildStartedToStash;
+    }    
+
+    public boolean getDeleteBuildStartedToStash() {
+        return deleteBuildStartedToStash;
+    }
+
+    public boolean getReportBuildStatusToStash() {
+        return reportBuildStatusToStash;
     }
 
     public boolean getDeletePreviousBuildFinishComments() {
