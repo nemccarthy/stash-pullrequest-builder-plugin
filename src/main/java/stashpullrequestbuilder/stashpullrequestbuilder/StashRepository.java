@@ -65,6 +65,9 @@ public class StashRepository {
     }
 
     public String postBuildStartCommentTo(StashPullRequestResponseValue pullRequest) {
+            if (!this.trigger.reportBuildStartedToStash()) {
+                return "";
+            }
             String sourceCommit = pullRequest.getFromRef().getCommit().getHash();
             String destinationCommit = pullRequest.getToRef().getCommit().getHash();
             String comment = String.format(BUILD_START_MARKER, builder.getProject().getDisplayName(), sourceCommit, destinationCommit);

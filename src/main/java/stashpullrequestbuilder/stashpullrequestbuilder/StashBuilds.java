@@ -47,6 +47,7 @@ public class StashBuilds {
         if (cause == null) {
             return;
         }
+
         Result result = build.getResult();
         String rootUrl = Jenkins.getInstance().getRootUrl();
         String buildUrl = "";
@@ -56,7 +57,9 @@ public class StashBuilds {
         else {
             buildUrl = rootUrl + build.getUrl();
         }
-        repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
+        if (trigger.reportBuildStartedToStash()) {
+            repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
+        }
 
         StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
         String additionalComment = "";
@@ -68,6 +71,8 @@ public class StashBuilds {
             }
         }
 
-        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(), cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber(), additionalComment);
+        if (trigger.reportBuildStatusToStash()) {
+            repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(), cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber(), additionalComment);
+        }
     }
 }
