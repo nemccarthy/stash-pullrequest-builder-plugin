@@ -57,7 +57,7 @@ public class StashBuilds {
         else {
             buildUrl = rootUrl + build.getUrl();
         }
-        if (trigger.reportBuildStartedToStash()) {
+        if (trigger.deleteBuildStartedToStash()) {
             repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
         }
 
