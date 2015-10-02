@@ -145,6 +145,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
         values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
         values.put("pullRequestTitle", new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
+        values.put("sourceCommitHash", new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
         return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList(values.values())));
     }
 
