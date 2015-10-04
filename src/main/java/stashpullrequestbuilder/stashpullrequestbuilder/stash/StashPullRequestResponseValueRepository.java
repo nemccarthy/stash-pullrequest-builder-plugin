@@ -22,6 +22,7 @@ public class StashPullRequestResponseValueRepository {
 
     private String latestChangeset;
     private String id;
+    private String latestCommit;
 
 
     @JsonProperty("id")
@@ -104,6 +105,14 @@ public class StashPullRequestResponseValueRepository {
 
     public void setCommit(StashPullRequestResponseValueRepositoryCommit commit) {
         this.commit = commit;
+    }
+
+    public String getLatestCommit() {
+        return latestCommit;
+    }
+
+    public void setLatestCommit(String latestCommit) {
+        this.latestCommit = latestCommit;
     }
 }
 

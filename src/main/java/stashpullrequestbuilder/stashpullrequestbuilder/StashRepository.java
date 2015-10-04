@@ -65,8 +65,8 @@ public class StashRepository {
     }
 
     public String postBuildStartCommentTo(StashPullRequestResponseValue pullRequest) {
-            String sourceCommit = pullRequest.getFromRef().getCommit().getHash();
-            String destinationCommit = pullRequest.getToRef().getCommit().getHash();
+            String sourceCommit = pullRequest.getFromRef().getLatestCommit();
+            String destinationCommit = pullRequest.getToRef().getLatestCommit();
             String comment = String.format(BUILD_START_MARKER, builder.getProject().getDisplayName(), sourceCommit, destinationCommit);
             StashPullRequestComment commentResponse = this.client.postPullRequestComment(pullRequest.getId(), comment);
             return commentResponse.getCommentId().toString();
@@ -85,8 +85,8 @@ public class StashRepository {
                     pullRequest.getToRef().getRepository().getProjectName(),
                     pullRequest.getToRef().getRepository().getRepositoryName(),
                     pullRequest.getTitle(),
-                    pullRequest.getFromRef().getCommit().getHash(),
-                    pullRequest.getToRef().getCommit().getHash(),
+                    pullRequest.getFromRef().getLatestCommit(),
+                    pullRequest.getToRef().getLatestCommit(),
                     commentId);
             this.builder.getTrigger().startJob(cause);
 
@@ -137,12 +137,12 @@ public class StashRepository {
                 shouldBuild = false;
             }
 
-            String sourceCommit = pullRequest.getFromRef().getCommit().getHash();
+            String sourceCommit = pullRequest.getFromRef().getLatestCommit();
 
             StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
             String owner = destination.getRepository().getProjectName();
             String repositoryName = destination.getRepository().getRepositoryName();
-            String destinationCommit = destination.getCommit().getHash();
+            String destinationCommit = destination.getLatestCommit();
 
             String id = pullRequest.getId();
             List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
