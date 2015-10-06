@@ -108,6 +108,9 @@ public class StashPullRequestResponseValueRepository {
     }
 
     public String getLatestCommit() {
+        if(commit != null) {
+            return commit.getHash();
+        }
         return latestCommit;
     }
 
