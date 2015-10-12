@@ -57,7 +57,9 @@ If you want to rerun pull request test, write *“test this please”* comment t
 If you want to add additional parameters to the triggered build, add comments using the pattern <parametersname>=<value>, one at each line. If the same parametername appears mulitple times the latest comment with that parameter will decide the value.
 
 Example:
+
 country=USA
+
 ball=hard
 
 ## Post Build Comment
