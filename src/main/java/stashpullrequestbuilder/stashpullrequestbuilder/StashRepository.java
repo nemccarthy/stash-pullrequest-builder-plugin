@@ -25,8 +25,8 @@ public class StashRepository {
     public static final String BUILD_START_REGEX = "\\[\\*BuildStarted\\* \\*\\*%s\\*\\*\\] ([0-9a-fA-F]+) into ([0-9a-fA-F]+)";
     public static final String BUILD_FINISH_REGEX = "\\[\\*BuildFinished\\* \\*\\*%s\\*\\*\\] ([0-9a-fA-F]+) into ([0-9a-fA-F]+)";
 
-    public static final String BUILD_FINISH_SENTENCE = BUILD_FINISH_MARKER + " \n\n **[%s](%s)** - Build #%d";
-    public static final String BUILD_START_SENTENCE = BUILD_START_MARKER + " \n\n **[%s](%s)** - Build #%d";
+    public static final String BUILD_FINISH_SENTENCE = BUILD_FINISH_MARKER + " \n\n **[%s](%s)** - Build *#%d* which took *%s*";
+    public static final String BUILD_START_SENTENCE = BUILD_START_MARKER + " \n\n **[%s](%s)** - Build *#%d*";
 
     public static final String BUILD_SUCCESS_COMMENT =  "✓ BUILD SUCCESS";
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
@@ -97,12 +97,12 @@ public class StashRepository {
         this.client.deletePullRequestComment(pullRequestId, commentId);
     }
 
-    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber, String additionalComment) {
+    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber, String additionalComment, String duration) {
         String message = BUILD_FAILURE_COMMENT;
         if (success){
             message = BUILD_SUCCESS_COMMENT;
         }
-        String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber);
+        String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
 
         comment = comment.concat(additionalComment);
 
