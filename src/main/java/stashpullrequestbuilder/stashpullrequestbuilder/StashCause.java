@@ -1,5 +1,7 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import java.util.Map;
+
 import hudson.model.Cause;
 
 /**
@@ -18,6 +20,7 @@ public class StashCause extends Cause {
     private final String destinationCommitHash;
     private final String buildStartCommentId;
     private final String stashHost;
+    private final Map<String,String> additionalParameters;
 
     public StashCause(String stashHost,
                           String sourceBranch,
@@ -30,7 +33,8 @@ public class StashCause extends Cause {
                           String pullRequestTitle,
                           String sourceCommitHash,
                           String destinationCommitHash,
-                          String buildStartCommentId) {
+                          String buildStartCommentId,
+                          Map<String,String> additionalParameters) {
         this.sourceBranch = sourceBranch;
         this.targetBranch = targetBranch;
         this.repositoryOwner = repositoryOwner;
@@ -43,6 +47,7 @@ public class StashCause extends Cause {
         this.destinationCommitHash = destinationCommitHash;
         this.buildStartCommentId = buildStartCommentId;
         this.stashHost = stashHost.replaceAll("/$", "");
+        this.additionalParameters = additionalParameters;
     }
 
     public String getSourceBranch() {
@@ -83,6 +88,8 @@ public class StashCause extends Cause {
 
     public String getBuildStartCommentId() { return buildStartCommentId; }
 
+    public Map<String,String> getAdditionalParameters() { return additionalParameters; }
+    
     @Override
     public String getShortDescription() {
         return "<a href=\"" + stashHost + "/projects/" + this.getDestinationRepositoryOwner() + "/repos/" +
