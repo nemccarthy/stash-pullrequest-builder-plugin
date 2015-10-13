@@ -67,7 +67,9 @@ public class StashBuilds {
               additionalComment = "\n\n" + buildComment;
             }
         }
-
-        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(), cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl, build.getNumber(), additionalComment);
+        String duration = build.getDurationString();
+        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
+                cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl,
+                build.getNumber(), additionalComment, duration);
     }
 }

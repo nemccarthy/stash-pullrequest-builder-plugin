@@ -47,11 +47,23 @@ You may want Jenkins to attempt to merge your PR before doing the build -- this 
 If you are merging into your target branch, you might want Jenkins to do a new build of the Pull Request when the target branch changes.
 - There is a checkbox that says, "Rebuild if destination branch changes?" which enables this check.
 
+##Notify Stash Instance (StashNotifier plugin)
+
+If you have enabled the 'Notify Stash Instance' Post-build Action and also enabled 'Merge before build', you need to set '${sourceCommitHash}' as Commit SHA-1.  This will record the build result against the source commit.
 
 ##Rerun test builds
 
 If you want to rerun pull request test, write *“test this please”* comment to your pull request.
 
+##Adding additional parameters to a build
+
+If you want to add additional parameters to the triggered build, add comments using the pattern <parametersname>=<value>, one at each line. If the same parametername appears mulitple times the latest comment with that parameter will decide the value.
+
+Example:
+
+country=USA
+
+ball=hard
 
 ## Post Build Comment
 

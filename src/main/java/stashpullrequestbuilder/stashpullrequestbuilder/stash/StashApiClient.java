@@ -9,10 +9,13 @@ import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.io.IOUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +28,7 @@ import java.util.logging.Logger;
  */
 public class StashApiClient {
     private static final Logger logger = Logger.getLogger(StashApiClient.class.getName());
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     private String apiBaseUrl;
 
@@ -150,7 +154,10 @@ public class StashApiClient {
         String response = null;
         try {
             client.executeMethod(httpget);
-            response = httpget.getResponseBodyAsString();
+            InputStream responseBodyAsStream = httpget.getResponseBodyAsStream();
+            StringWriter stringWriter = new StringWriter();
+            IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
+            response = stringWriter.toString();
         } catch (HttpException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -180,7 +187,6 @@ public class StashApiClient {
         client.getState().setCredentials(AuthScope.ANY, credentials);
         PostMethod httppost = new PostMethod(path);
 
-        ObjectMapper mapper = new ObjectMapper();
         ObjectNode node = mapper.getNodeFactory().objectNode();
         node.put("text", comment);
 
@@ -199,7 +205,10 @@ public class StashApiClient {
         String response = "";
         try {
             client.executeMethod(httppost);
-            response = httppost.getResponseBodyAsString();
+            InputStream responseBodyAsStream = httppost.getResponseBodyAsStream();
+            StringWriter stringWriter = new StringWriter();
+            IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
+            response = stringWriter.toString();
             logger.info("API Request Response: " + response);
         } catch (HttpException e) {
             e.printStackTrace();
@@ -212,14 +221,12 @@ public class StashApiClient {
     }
 
     private StashPullRequestResponse parsePullRequestJson(String response) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
         StashPullRequestResponse parsedResponse;
         parsedResponse = mapper.readValue(response, StashPullRequestResponse.class);
         return parsedResponse;
     }
 
     private StashPullRequestActivityResponse parseCommentJson(String response) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
         StashPullRequestActivityResponse parsedResponse;
         parsedResponse = mapper.readValue(response, StashPullRequestActivityResponse.class);
         return parsedResponse;
@@ -236,7 +243,6 @@ public class StashApiClient {
     }
 
     private StashPullRequestComment parseSingleCommentJson(String response) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
         StashPullRequestComment parsedResponse;
         parsedResponse = mapper.readValue(
                 response,
@@ -245,7 +251,6 @@ public class StashApiClient {
     }
 
     protected static StashPullRequestMergableResponse parsePullRequestMergeStatus(String response) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
         StashPullRequestMergableResponse parsedResponse;
         parsedResponse = mapper.readValue(
                 response,
