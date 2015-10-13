@@ -30,6 +30,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String repositoryName;
     private final String ciSkipPhrases;
     private final String ciBuildPhrases;
+    private final boolean ignoreSsl;
     private final boolean checkDestinationCommit;
     private final boolean checkMergeable;
     private final boolean checkNotConflicted;
@@ -50,6 +51,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String projectCode,
             String repositoryName,
             String ciSkipPhrases,
+            boolean ignoreSsl,
             boolean checkDestinationCommit,
             boolean checkMergeable,
             boolean checkNotConflicted,
@@ -66,6 +68,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
+        this.ignoreSsl = ignoreSsl;
         this.checkDestinationCommit = checkDestinationCommit;
         this.checkMergeable = checkMergeable;
         this.checkNotConflicted = checkNotConflicted;
@@ -112,6 +115,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     	return checkDestinationCommit;
     }
 
+    public boolean isIgnoreSsl() {
+        return ignoreSsl;
+    }
+
     @Override
     public void start(AbstractProject<?, ?> project, boolean newInstance) {
         try {
@@ -145,6 +152,15 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
         values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
         values.put("pullRequestTitle", new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
+        values.put("sourceCommitHash", new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
+        
+        Map<String, String> additionalParameters = cause.getAdditionalParameters();
+        if(additionalParameters != null){
+        	for(String parameter : additionalParameters.keySet()){
+        		values.put(parameter, new StringParameterValue(parameter, additionalParameters.get(parameter)));
+        	}
+        }
+        
         return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList(values.values())));
     }
 

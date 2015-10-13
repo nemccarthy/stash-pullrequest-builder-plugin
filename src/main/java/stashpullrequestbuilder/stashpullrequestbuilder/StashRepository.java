@@ -6,10 +6,13 @@ import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMer
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,12 +28,15 @@ public class StashRepository {
     public static final String BUILD_START_REGEX = "\\[\\*BuildStarted\\* \\*\\*%s\\*\\*\\] ([0-9a-fA-F]+) into ([0-9a-fA-F]+)";
     public static final String BUILD_FINISH_REGEX = "\\[\\*BuildFinished\\* \\*\\*%s\\*\\*\\] ([0-9a-fA-F]+) into ([0-9a-fA-F]+)";
 
-    public static final String BUILD_FINISH_SENTENCE = BUILD_FINISH_MARKER + " \n\n **[%s](%s)** - Build #%d";
-    public static final String BUILD_START_SENTENCE = BUILD_START_MARKER + " \n\n **[%s](%s)** - Build #%d";
+    public static final String BUILD_FINISH_SENTENCE = BUILD_FINISH_MARKER + " \n\n **[%s](%s)** - Build *#%d* which took *%s*";
+    public static final String BUILD_START_SENTENCE = BUILD_START_MARKER + " \n\n **[%s](%s)** - Build *#%d*";
 
     public static final String BUILD_SUCCESS_COMMENT =  "✓ BUILD SUCCESS";
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
     public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
+
+    public static final String ADDITIONAL_PARAMETER_REGEX = "\\b(([A-Za-z_])+)=(.*)";
+    public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX, Pattern.CASE_INSENSITIVE);
 
     private String projectPath;
     private StashPullRequestsBuilder builder;
@@ -49,7 +55,8 @@ public class StashRepository {
                 trigger.getUsername(),
                 trigger.getPassword(),
                 trigger.getProjectCode(),
-                trigger.getRepositoryName());
+                trigger.getRepositoryName(),
+                trigger.isIgnoreSsl());
     }
 
     public Collection<StashPullRequestResponseValue> getTargetPullRequests() {
@@ -65,15 +72,71 @@ public class StashRepository {
     }
 
     public String postBuildStartCommentTo(StashPullRequestResponseValue pullRequest) {
-            String sourceCommit = pullRequest.getFromRef().getCommit().getHash();
-            String destinationCommit = pullRequest.getToRef().getCommit().getHash();
+            String sourceCommit = pullRequest.getFromRef().getLatestCommit();
+            String destinationCommit = pullRequest.getToRef().getLatestCommit();
             String comment = String.format(BUILD_START_MARKER, builder.getProject().getDisplayName(), sourceCommit, destinationCommit);
             StashPullRequestComment commentResponse = this.client.postPullRequestComment(pullRequest.getId(), comment);
             return commentResponse.getCommentId().toString();
     }
 
+    public static AbstractMap.SimpleEntry<String,String> getParameter(String content){
+    	if(content.isEmpty()){
+    		return null;
+    	}
+        Matcher parameterMatcher = ADDITIONAL_PARAMETER_REGEX_PATTERN.matcher(content);
+        if(parameterMatcher.find(0)){
+        	String parameterName = parameterMatcher.group(1);
+        	String parameterValue = parameterMatcher.group(3);
+        	return new AbstractMap.SimpleEntry<String,String>(parameterName, parameterValue);
+        }
+        return null;
+    }
+    
+    public static Map<String, String> getParametersFromContent(String content){
+        Map<String, String> result = new TreeMap<String, String>();
+		String lines[] = content.split("\\r?\\n");
+		for(String line : lines){
+			AbstractMap.SimpleEntry<String,String> parameter = getParameter(line);
+			if(parameter != null){
+				result.put(parameter.getKey(), parameter.getValue());
+			}
+		}
+        
+        return result;
+   }
+    
+    public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest){
+        StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+        String owner = destination.getRepository().getProjectName();
+        String repositoryName = destination.getRepository().getRepositoryName();
+
+        String id = pullRequest.getId();
+        List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
+        if (comments != null) {
+            Collections.sort(comments);
+//          Collections.reverse(comments);
+
+            Map<String, String> result = new TreeMap<String, String>();
+            
+            for (StashPullRequestComment comment : comments) {
+                String content = comment.getText();
+                if (content == null || content.isEmpty()) {
+                    continue;
+                }
+
+                Map<String,String> parameters = getParametersFromContent(content);
+                for(String key : parameters.keySet()){
+                	result.put(key, parameters.get(key));
+                }
+            }
+            return result;
+        }
+        return null;
+    }
+    
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
+        	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
             String commentId = postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
@@ -85,9 +148,10 @@ public class StashRepository {
                     pullRequest.getToRef().getRepository().getProjectName(),
                     pullRequest.getToRef().getRepository().getRepositoryName(),
                     pullRequest.getTitle(),
-                    pullRequest.getFromRef().getCommit().getHash(),
-                    pullRequest.getToRef().getCommit().getHash(),
-                    commentId);
+                    pullRequest.getFromRef().getLatestCommit(),
+                    pullRequest.getToRef().getLatestCommit(),
+                    commentId,
+                    additionalParameters);
             this.builder.getTrigger().startJob(cause);
 
         }
@@ -97,12 +161,12 @@ public class StashRepository {
         this.client.deletePullRequestComment(pullRequestId, commentId);
     }
 
-    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber, String additionalComment) {
+    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber, String additionalComment, String duration) {
         String message = BUILD_FAILURE_COMMENT;
         if (success){
             message = BUILD_SUCCESS_COMMENT;
         }
-        String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber);
+        String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
 
         comment = comment.concat(additionalComment);
 
@@ -137,12 +201,12 @@ public class StashRepository {
                 shouldBuild = false;
             }
 
-            String sourceCommit = pullRequest.getFromRef().getCommit().getHash();
+            String sourceCommit = pullRequest.getFromRef().getLatestCommit();
 
             StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
             String owner = destination.getRepository().getProjectName();
             String repositoryName = destination.getRepository().getRepositoryName();
-            String destinationCommit = destination.getCommit().getHash();
+            String destinationCommit = destination.getLatestCommit();
 
             String id = pullRequest.getId();
             List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
