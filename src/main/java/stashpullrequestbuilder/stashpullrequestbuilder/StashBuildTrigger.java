@@ -30,6 +30,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String repositoryName;
     private final String ciSkipPhrases;
     private final String ciBuildPhrases;
+    private final boolean ignoreSsl;
     private final boolean checkDestinationCommit;
     private final boolean checkMergeable;
     private final boolean checkNotConflicted;
@@ -50,6 +51,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String projectCode,
             String repositoryName,
             String ciSkipPhrases,
+            boolean ignoreSsl,
             boolean checkDestinationCommit,
             boolean checkMergeable,
             boolean checkNotConflicted,
@@ -66,6 +68,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
+        this.ignoreSsl = ignoreSsl;
         this.checkDestinationCommit = checkDestinationCommit;
         this.checkMergeable = checkMergeable;
         this.checkNotConflicted = checkNotConflicted;
@@ -110,6 +113,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public boolean getCheckDestinationCommit() {
     	return checkDestinationCommit;
+    }
+
+    public boolean isIgnoreSsl() {
+        return ignoreSsl;
     }
 
     @Override
