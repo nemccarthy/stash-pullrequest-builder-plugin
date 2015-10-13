@@ -1,22 +1,33 @@
 package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 
-import org.apache.commons.httpclient.Credentials;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpException;
-import org.apache.commons.httpclient.UsernamePasswordCredentials;
+import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.httpclient.params.HttpConnectionParams;
+import org.apache.commons.httpclient.protocol.Protocol;
+import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.io.IOUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,11 +47,16 @@ public class StashApiClient {
     private String repositoryName;
     private Credentials credentials;
 
-    public StashApiClient(String stashHost, String username, String password, String project, String repositoryName) {
+
+    public StashApiClient(String stashHost, String username, String password, String project, String repositoryName, boolean ignoreSsl) {
         this.credentials = new UsernamePasswordCredentials(username, password);
         this.project = project;
         this.repositoryName = repositoryName;
         this.apiBaseUrl = stashHost.replaceAll("/$", "") + "/rest/api/1.0/projects/";
+        if (ignoreSsl) {
+            Protocol easyhttps = new Protocol("https", (ProtocolSocketFactory) new EasySSLProtocolSocketFactory(), 443);
+            Protocol.registerProtocol("https", easyhttps);
+        }
     }
 
     public List<StashPullRequestResponseValue> getPullRequests() {
@@ -98,7 +114,7 @@ public class StashApiClient {
     public StashPullRequestComment postPullRequestComment(String pullRequestId, String comment) {
         String path = pullRequestPath(pullRequestId) + "/comments";
         try {
-            String response = postRequest(path,  comment);
+            String response = postRequest(path, comment);
             return parseSingleCommentJson(response);
 
         } catch (UnsupportedEncodingException e) {
@@ -222,7 +238,7 @@ public class StashApiClient {
 
     private StashPullRequestResponse parsePullRequestJson(String response) throws IOException {
         StashPullRequestResponse parsedResponse;
-        parsedResponse = mapper.readValue(response, StashPullRequestResponse.class);
+	    parsedResponse = mapper.readValue(response, StashPullRequestResponse.class);
         return parsedResponse;
     }
 
@@ -269,6 +285,71 @@ public class StashApiClient {
     private String pullRequestsPath(int start) {
         String basePath = pullRequestsPath();
         return basePath.substring(0, basePath.length() - 1) + "?start=" + start;
+    }
+
+    private static class EasySSLProtocolSocketFactory extends org.apache.commons.httpclient.contrib.ssl.EasySSLProtocolSocketFactory {
+        private static final Log LOG = LogFactory.getLog(EasySSLProtocolSocketFactory.class);
+        private SSLContext sslcontext = null;
+
+        private static SSLContext createEasySSLContext() {
+            try {
+                TrustManager[] trustAllCerts = new TrustManager[]{
+                        new X509TrustManager(){
+                            public X509Certificate[] getAcceptedIssuers(){ return null; }
+                            public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                            public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                        }
+                };
+
+                SSLContext context = SSLContext.getInstance("SSL");
+                context.init(
+                        null,
+                        trustAllCerts,
+                        null);
+                return context;
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+                throw new HttpClientError(e.toString());
+            }
+        }
+
+        private SSLContext getSSLContext() {
+            if (this.sslcontext == null) {
+                this.sslcontext = createEasySSLContext();
+            }
+            return this.sslcontext;
+        }
+
+        public Socket createSocket(String host, int port, InetAddress clientHost, int clientPort) throws IOException, UnknownHostException {
+            return this.getSSLContext().getSocketFactory().createSocket(host, port, clientHost, clientPort);
+        }
+
+        public Socket createSocket(String host, int port, InetAddress localAddress, int localPort, HttpConnectionParams params) throws IOException, UnknownHostException, ConnectTimeoutException {
+            if(params == null) {
+                throw new IllegalArgumentException("Parameters may not be null");
+            } else {
+                int timeout = params.getConnectionTimeout();
+                SSLSocketFactory socketfactory = this.getSSLContext().getSocketFactory();
+                if(timeout == 0) {
+                    return socketfactory.createSocket(host, port, localAddress, localPort);
+                } else {
+                    Socket socket = socketfactory.createSocket();
+                    InetSocketAddress localaddr = new InetSocketAddress(localAddress, localPort);
+                    InetSocketAddress remoteaddr = new InetSocketAddress(host, port);
+                    socket.bind(localaddr);
+                    socket.connect(remoteaddr, timeout);
+                    return socket;
+                }
+            }
+        }
+
+        public Socket createSocket(String host, int port) throws IOException {
+            return this.getSSLContext().getSocketFactory().createSocket(host, port);
+        }
+
+        public Socket createSocket(Socket socket, String host, int port, boolean autoClose) throws IOException {
+            return this.getSSLContext().getSocketFactory().createSocket(socket, host, port, autoClose);
+        }
     }
 }
 
