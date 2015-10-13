@@ -127,8 +127,10 @@ public class StashApiClient {
 
     private HttpClient getHttpClient() {
         HttpClient client = new HttpClient();
-    	HttpParams httpParams = client.getParams();    	
+    	HttpParams httpParams = client.getParams();
+        //ConnectionTimeout : This denotes the time elapsed before the connection established or Server responded to connection request.
     	httpParams.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, StashApiClient.HTTP_CONNECTION_TIMEOUT_SECONDS * 1000);
+    	//SoTimeout : Maximum period inactivity between two consecutive data packets arriving at client side after connection is established.
     	httpParams.setParameter(CoreConnectionPNames.SO_TIMEOUT, StashApiClient.HTTP_SOCKET_TIMEOUT_SECONDS * 1000);
         
 //        if (Jenkins.getInstance() != null) {
@@ -153,14 +155,22 @@ public class StashApiClient {
         logger.log(Level.FINEST, "PR-GET-REQUEST:" + path);
         HttpClient client = getHttpClient();
         client.getState().setCredentials(AuthScope.ANY, credentials);
+        
         GetMethod httpget = new GetMethod(path);
+        //http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html; section 14.10.
+        //tells the server that we want it to close the connection when it has sent the response.
+        //address large amount of close_wait sockets client and fin sockets server side
         httpget.setRequestHeader("Connection", "close");
+        
         client.getParams().setAuthenticationPreemptive(true);
         String response = null;
         FutureTask<String> httpTask = null;
         Thread thread;
         try {
-            httpTask = new FutureTask<String>(new Callable<String>() {
+            //Run the http request in a future task so we have the opportunity
+        	//to cancel it if it gets hung up; which is possible if stuck at
+        	//socket native layer.  see issue JENKINS-30558
+        	httpTask = new FutureTask<String>(new Callable<String>() {
 
             	private HttpClient client;
             	private GetMethod httpget;
@@ -214,15 +224,23 @@ public class StashApiClient {
     public void deleteRequest(String path) {
         HttpClient client = getHttpClient();
         client.getState().setCredentials(AuthScope.ANY, credentials);
+
         DeleteMethod httppost = new DeleteMethod(path);
+        //http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html; section 14.10.
+        //tells the server that we want it to close the connection when it has sent the response.
+        //address large amount of close_wait sockets client and fin sockets server side        
         httppost.setRequestHeader("Connection", "close");
+        
         client.getParams().setAuthenticationPreemptive(true);
         int res = -1;
         FutureTask<Integer> httpTask = null;
         Thread thread;
 
         try {
-            httpTask = new FutureTask<Integer>(new Callable<Integer>() {
+            //Run the http request in a future task so we have the opportunity
+        	//to cancel it if it gets hung up; which is possible if stuck at
+        	//socket native layer.  see issue JENKINS-30558
+        	httpTask = new FutureTask<Integer>(new Callable<Integer>() {
 
             	private HttpClient client;
             	private DeleteMethod httppost;
@@ -270,7 +288,11 @@ public class StashApiClient {
         logger.log(Level.FINEST, "PR-POST-REQUEST:" + path + " with: " + comment);
         HttpClient client = getHttpClient();
         client.getState().setCredentials(AuthScope.ANY, credentials);
+        
         PostMethod httppost = new PostMethod(path);
+        //http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html; section 14.10.
+        //tells the server that we want it to close the connection when it has sent the response.
+        //address large amount of close_wait sockets client and fin sockets server side        
         httppost.setRequestHeader("Connection", "close");
 
         ObjectNode node = mapper.getNodeFactory().objectNode();
@@ -293,6 +315,9 @@ public class StashApiClient {
         Thread thread;
 
         try {
+            //Run the http request in a future task so we have the opportunity
+        	//to cancel it if it gets hung up; which is possible if stuck at
+        	//socket native layer.  see issue JENKINS-30558
             httpTask = new FutureTask<String>(new Callable<String>() {
 
             	private HttpClient client;
