@@ -35,7 +35,7 @@ public class StashRepository {
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
     public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
 
-    public static final String ADDITIONAL_PARAMETER_REGEX = "\\b(([A-Za-z_])+)=(.*)";
+    public static final String ADDITIONAL_PARAMETER_REGEX = "\\b(([A-Za-z_0-9])+)=(.*)";
     public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX, Pattern.CASE_INSENSITIVE);
 
     private String projectPath;
