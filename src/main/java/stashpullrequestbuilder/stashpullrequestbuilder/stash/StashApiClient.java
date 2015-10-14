@@ -168,8 +168,9 @@ public class StashApiClient {
         GetMethod httpget = new GetMethod(path);
         client.getParams().setAuthenticationPreemptive(true);
         String response = null;
+        int responseCode;
         try {
-            client.executeMethod(httpget);
+            responseCode = client.executeMethod(httpget);
             InputStream responseBodyAsStream = httpget.getResponseBodyAsStream();
             StringWriter stringWriter = new StringWriter();
             IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
@@ -179,6 +180,11 @@ public class StashApiClient {
             throw new RuntimeException("Failed to process PR get request; " + path, e);
         }
         logger.log(Level.FINEST, "PR-GET-RESPONSE:" + response);
+        if (responseCode != HttpStatus.SC_OK) {
+            logger.log(Level.SEVERE, "Failing to get response from ");
+            throw new RuntimeException("Didn't get a 200 response from Stash PR! Response; '" +
+                    HttpStatus.getStatusText(responseCode) + "' with message; " + response);
+        }
         return response;
     }
 
