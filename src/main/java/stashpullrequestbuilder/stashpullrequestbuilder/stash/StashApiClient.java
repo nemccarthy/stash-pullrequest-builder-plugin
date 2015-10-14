@@ -181,8 +181,8 @@ public class StashApiClient {
         }
         logger.log(Level.FINEST, "PR-GET-RESPONSE:" + response);
         if (responseCode != HttpStatus.SC_OK) {
-            logger.log(Level.SEVERE, "Failing to get response from ");
-            throw new RuntimeException("Didn't get a 200 response from Stash PR! Response; '" +
+            logger.log(Level.SEVERE, "Failing to get response from Stash PR GET" + path);
+            throw new RuntimeException("Didn't get a 200 response from Stash PR GET! Response; '" +
                     HttpStatus.getStatusText(responseCode) + "' with message; " + response);
         }
         return response;
@@ -224,21 +224,25 @@ public class StashApiClient {
         httppost.setRequestEntity(requestEntity);
         client.getParams().setAuthenticationPreemptive(true);
         String response = "";
+        int responseCode;
         try {
-            client.executeMethod(httppost);
+            responseCode = client.executeMethod(httppost);
             InputStream responseBodyAsStream = httppost.getResponseBodyAsStream();
             StringWriter stringWriter = new StringWriter();
             IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
             response = stringWriter.toString();
             logger.info("API Request Response: " + response);
-        } catch (HttpException e) {
+        }  catch (Exception e) {
             e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to process PR get request; " + path, e);
         }
         logger.log(Level.FINEST, "PR-POST-RESPONSE:" + response);
+        if (responseCode != HttpStatus.SC_OK) {
+            logger.log(Level.SEVERE, "Failing to get response from Stash PR POST" + path);
+            throw new RuntimeException("Didn't get a 200 response from Stash PR POST! Response; '" +
+                    HttpStatus.getStatusText(responseCode) + "' with message; " + response);
+        }
         return response;
-
     }
 
     private StashPullRequestResponse parsePullRequestJson(String response) throws IOException {
