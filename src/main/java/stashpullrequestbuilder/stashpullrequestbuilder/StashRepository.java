@@ -35,8 +35,8 @@ public class StashRepository {
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
     public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
 
-    public static final String ADDITIONAL_PARAMETER_REGEX = "\\b(([A-Za-z_0-9])+)=(.*)";
-    public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX, Pattern.CASE_INSENSITIVE);
+    public static final String ADDITIONAL_PARAMETER_REGEX = "^p:(([A-Za-z_0-9])+)=(.*)";
+    public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX);
 
     private String projectPath;
     private StashPullRequestsBuilder builder;
@@ -94,7 +94,7 @@ public class StashRepository {
     
     public static Map<String, String> getParametersFromContent(String content){
         Map<String, String> result = new TreeMap<String, String>();
-		String lines[] = content.split("\\r?\\n");
+		String lines[] = content.split("\\r?\\n|\\r");
 		for(String line : lines){
 			AbstractMap.SimpleEntry<String,String> parameter = getParameter(line);
 			if(parameter != null){
