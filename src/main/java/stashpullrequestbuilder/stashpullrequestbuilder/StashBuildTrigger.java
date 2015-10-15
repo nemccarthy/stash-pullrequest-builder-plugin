@@ -1,5 +1,7 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestBuildHistory;
+
 import antlr.ANTLRException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -50,6 +52,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean reportBuildStatusToStash;
     private final boolean deletePreviousBuildFinishComments;
 
+    public static final StashPullRequestBuildHistory buildHistory = new StashPullRequestBuildHistory();
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
     @Extension
@@ -155,7 +158,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public boolean getReportBuildStartedToStash() {
         return reportBuildStartedToStash;
-    }    
+    }
 
     public boolean getDeleteBuildStartedToStash() {
         return deleteBuildStartedToStash;
@@ -179,7 +182,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             this.stashPullRequestsBuilder = StashPullRequestsBuilder.getBuilder();
             this.stashPullRequestsBuilder.setProject(project);
             this.stashPullRequestsBuilder.setTrigger(this);
-            this.stashPullRequestsBuilder.setupBuilder();
+            this.stashPullRequestsBuilder.setupBuilder(this.buildHistory);
         } catch(IllegalStateException e) {
             logger.log(Level.SEVERE, "Can't start trigger", e);
             return;

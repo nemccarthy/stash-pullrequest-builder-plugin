@@ -7,6 +7,7 @@ import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestCom
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestBuildHistory;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -47,10 +48,13 @@ public class StashRepository {
     private StashPullRequestsBuilder builder;
     private StashBuildTrigger trigger;
     private StashApiClient client;
+    private final StashPullRequestBuildHistory buildHistory;
 
-    public StashRepository(String projectPath, StashPullRequestsBuilder builder) {
+    public StashRepository(String projectPath, StashPullRequestsBuilder builder,
+            StashPullRequestBuildHistory buildHistory) {
         this.projectPath = projectPath;
         this.builder = builder;
+        this.buildHistory = buildHistory;
     }
 
     public void init() {
@@ -99,7 +103,7 @@ public class StashRepository {
         }
         return null;
     }
-    
+
     public static Map<String, String> getParametersFromContent(String content){
         Map<String, String> result = new TreeMap<String, String>();
 		String lines[] = content.split("\\r?\\n|\\r");
@@ -109,10 +113,10 @@ public class StashRepository {
 				result.put(parameter.getKey(), parameter.getValue());
 			}
 		}
-        
+
         return result;
    }
-    
+
     public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest){
         StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
         String owner = destination.getRepository().getProjectName();
@@ -125,7 +129,7 @@ public class StashRepository {
 //          Collections.reverse(comments);
 
             Map<String, String> result = new TreeMap<String, String>();
-            
+
             for (StashPullRequestComment comment : comments) {
                 String content = comment.getText();
                 if (content == null || content.isEmpty()) {
@@ -240,6 +244,7 @@ public class StashRepository {
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
 
         boolean shouldBuild = true;
+        boolean newBuild = false;
 
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
@@ -261,6 +266,9 @@ public class StashRepository {
                 shouldBuild = false;
             }
 
+            boolean mergeHasBeenBuilt;
+            boolean commentHasBeenBuilt = false;
+            Integer triggerCommentId = -1;
             String sourceCommit = pullRequest.getFromRef().getLatestCommit();
 
             StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
@@ -270,6 +278,8 @@ public class StashRepository {
 
             String id = pullRequest.getId();
             List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
+
+            mergeHasBeenBuilt = buildHistory.mergeHasBeenBuilt(sourceCommit, destinationCommit);
 
             if (comments != null) {
                 Collections.sort(comments);
@@ -305,7 +315,7 @@ public class StashRepository {
                             // if we're checking destination commits, and if this doesn't match, then move on.
                             if (this.trigger.getCheckDestinationCommit()
                                     && (!destinationCommitMatch.equalsIgnoreCase(destinationCommit))) {
-                            	continue;
+                                continue;
                             }
 
                             shouldBuild = false;
@@ -315,12 +325,27 @@ public class StashRepository {
 
                     if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
                         shouldBuild = true;
+                        triggerCommentId = comment.getCommentId();
+                        commentHasBeenBuilt = buildHistory.commentHasBeenBuilt(triggerCommentId);
                         break;
                     }
                 }
             }
+
+            if((triggerCommentId != -1 && ! commentHasBeenBuilt) || ! mergeHasBeenBuilt) {
+                newBuild = true;
+                if(! mergeHasBeenBuilt) {
+                    buildHistory.saveMergeTrigger(sourceCommit, destinationCommit);
+                }
+                if(triggerCommentId != -1 && ! commentHasBeenBuilt) {
+                    buildHistory.saveCommentTrigger(triggerCommentId);
+                }
+            } else {
+                newBuild = false;
+            }
         }
-        return shouldBuild;
+
+        return shouldBuild && newBuild;
     }
 
     private boolean isForTargetBranch(StashPullRequestResponseValue pullRequest) {
