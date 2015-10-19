@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -46,9 +45,9 @@ import java.util.logging.Logger;
  */
 public class StashApiClient {
 	
-	private static final int HTTP_REQUEST_TIMEOUT_SECONDS = 30;
-	private static final int HTTP_CONNECTION_TIMEOUT_SECONDS = 10;
-	private static final int HTTP_SOCKET_TIMEOUT_SECONDS = 10;
+	private static final int HTTP_REQUEST_TIMEOUT_SECONDS = 60;
+	private static final int HTTP_CONNECTION_TIMEOUT_SECONDS = 15;
+	private static final int HTTP_SOCKET_TIMEOUT_SECONDS = 15;
 		
     private static final Logger logger = Logger.getLogger(StashApiClient.class.getName());
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -206,18 +205,18 @@ public class StashApiClient {
                 @Override
                 public String call() throws Exception {
             		String response = null;
-                	try {
-                        client.executeMethod(httpget);
-                        InputStream responseBodyAsStream = httpget.getResponseBodyAsStream();
-                        StringWriter stringWriter = new StringWriter();
-                        IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
-                        response = stringWriter.toString();
-                    } catch (HttpException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                	
+            		int responseCode = HttpStatus.SC_INTERNAL_SERVER_ERROR;
+                    responseCode = client.executeMethod(httpget);
+                    if (responseCode != HttpStatus.SC_OK) {
+                        logger.log(Level.SEVERE, "Failing to get response from Stash PR GET" + httpget.getPath());
+                        throw new RuntimeException("Didn't get a 200 response from Stash PR GET! Response; '" +
+                                HttpStatus.getStatusText(responseCode) + "' with message; " + response);
+                    }                        
+                    InputStream responseBodyAsStream = httpget.getResponseBodyAsStream();
+                    StringWriter stringWriter = new StringWriter();
+                    IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
+                    response = stringWriter.toString();
+                	                	
                 	return response;
 
                 }
@@ -233,18 +232,16 @@ public class StashApiClient {
             thread.start();
             response = httpTask.get((long)StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
         } catch (TimeoutException e) {
             e.printStackTrace();
             httpget.abort();
-            httpTask.cancel(true);
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+        	e.printStackTrace();
+        	throw new RuntimeException(e);
         } finally {
         	httpget.releaseConnection();
         }
-            
         logger.log(Level.FINEST, "PR-GET-RESPONSE:" + response);
         return response;
     }
@@ -276,12 +273,7 @@ public class StashApiClient {
                 @Override
                 public Integer call() throws Exception {
                 	int res = -1;
-                    try {
-                        res = client.executeMethod(httppost);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    
+                	res = client.executeMethod(httppost);                    
                     return res;
 
                 }
@@ -297,14 +289,13 @@ public class StashApiClient {
             thread.start();
             res = httpTask.get((long)StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
         } catch (TimeoutException e) {
             e.printStackTrace();
             httppost.abort();
-            httpTask.cancel(true);
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+        	e.printStackTrace();
+        	throw new RuntimeException(e);
         } finally {
         	httppost.releaseConnection();
         }
@@ -354,19 +345,19 @@ public class StashApiClient {
                 @Override
                 public String call() throws Exception {
                 	String response = "";
+                	int responseCode = HttpStatus.SC_INTERNAL_SERVER_ERROR;
                 	
-                    try {
-                        client.executeMethod(httppost);
-                        InputStream responseBodyAsStream = httppost.getResponseBodyAsStream();
-                        StringWriter stringWriter = new StringWriter();
-                        IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
-                        response = stringWriter.toString();
-                        logger.info("API Request Response: " + response);
-                    } catch (HttpException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    responseCode = client.executeMethod(httppost);
+                    if (responseCode != HttpStatus.SC_OK) {
+                        logger.log(Level.SEVERE, "Failing to get response from Stash PR POST" + httppost.getPath());
+                        throw new RuntimeException("Didn't get a 200 response from Stash PR POST! Response; '" +
+                                HttpStatus.getStatusText(responseCode) + "' with message; " + response);
                     }
+                    InputStream responseBodyAsStream = httppost.getResponseBodyAsStream();
+                    StringWriter stringWriter = new StringWriter();
+                    IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
+                    response = stringWriter.toString();
+                    logger.info("API Request Response: " + response);
                     
                     return response;
 
@@ -383,22 +374,20 @@ public class StashApiClient {
             thread.start();
             response = httpTask.get((long)StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
         } catch (TimeoutException e) {
             e.printStackTrace();
             httppost.abort();
-            httpTask.cancel(true);            
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+        	e.printStackTrace();
+        	throw new RuntimeException(e);
         } finally {
         	httppost.releaseConnection();
         }
                 
         logger.log(Level.FINEST, "PR-POST-RESPONSE:" + response);
-        return response;
-        
 
+        return response;
     }
 
     private StashPullRequestResponse parsePullRequestJson(String response) throws IOException {

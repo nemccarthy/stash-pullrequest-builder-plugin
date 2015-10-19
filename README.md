@@ -53,17 +53,18 @@ If you have enabled the 'Notify Stash Instance' Post-build Action and also enabl
 
 ##Rerun test builds
 
-If you want to rerun pull request test, write *“test this please”* comment to your pull request.
+If you want to rerun pull request test, write *"test this please"* comment to your pull request.
 
 ##Adding additional parameters to a build
 
-If you want to add additional parameters to the triggered build, add comments using the pattern <parametersname>=<value>, one at each line. If the same parametername appears mulitple times the latest comment with that parameter will decide the value.
+If you want to add additional parameters to the triggered build, add comments using the pattern `p:<parameter_name>=<value>`, one at each line, prefixed with `p:`. If the same parameter name appears multiple times the latest comment with that parameter will decide the value.
 
-Example:
+**Example:**
 
-country=USA
+    test this please
+    p:country=USA
+    p:env=dev1
 
-ball=hard
 
 ## Post Build Comment
 
