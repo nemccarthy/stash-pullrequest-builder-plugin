@@ -180,7 +180,7 @@ public class StashApiClient {
             throw new RuntimeException("Failed to process PR get request; " + path, e);
         }
         logger.log(Level.FINEST, "PR-GET-RESPONSE:" + response);
-        if (responseCode != HttpStatus.SC_OK) {
+        if (!validResponseCode(responseCode)) {
             logger.log(Level.SEVERE, "Failing to get response from Stash PR GET" + path);
             throw new RuntimeException("Didn't get a 200 response from Stash PR GET! Response; '" +
                     HttpStatus.getStatusText(responseCode) + "' with message; " + response);
@@ -237,12 +237,20 @@ public class StashApiClient {
             throw new RuntimeException("Failed to process PR get request; " + path, e);
         }
         logger.log(Level.FINEST, "PR-POST-RESPONSE:" + response);
-        if (responseCode != HttpStatus.SC_OK) {
+        if (!validResponseCode(responseCode)) {
             logger.log(Level.SEVERE, "Failing to get response from Stash PR POST" + path);
             throw new RuntimeException("Didn't get a 200 response from Stash PR POST! Response; '" +
                     HttpStatus.getStatusText(responseCode) + "' with message; " + response);
         }
         return response;
+    }
+
+    private boolean validResponseCode(int responseCode) {
+        return responseCode == HttpStatus.SC_OK ||
+                responseCode == HttpStatus.SC_ACCEPTED ||
+                responseCode == HttpStatus.SC_CREATED ||
+                responseCode == HttpStatus.SC_NO_CONTENT ||
+                responseCode == HttpStatus.SC_RESET_CONTENT ;
     }
 
     private StashPullRequestResponse parsePullRequestJson(String response) throws IOException {
