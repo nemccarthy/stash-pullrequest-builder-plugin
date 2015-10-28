@@ -114,10 +114,9 @@ public class StashRepository {
         List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
         if (comments != null) {
             Collections.sort(comments);
-//          Collections.reverse(comments);
 
             Map<String, String> result = new TreeMap<String, String>();
-            
+
             for (StashPullRequestComment comment : comments) {
                 String content = comment.getText();
                 if (content == null || content.isEmpty()) {
@@ -126,7 +125,7 @@ public class StashRepository {
 
                 Map<String,String> parameters = getParametersFromContent(content);
                 for(String key : parameters.keySet()){
-                	result.put(key, parameters.get(key));
+                    result.put(key, parameters.get(key));
                 }
             }
             return result;
@@ -135,9 +134,10 @@ public class StashRepository {
     }
     
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
-        for(StashPullRequestResponseValue pullRequest : pullRequests) {
+        for (StashPullRequestResponseValue pullRequest : pullRequests) {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
-            String commentId = postBuildStartCommentTo(pullRequest);
+            String commentId = trigger.isSuppressComments()
+                ? "" : postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
                     pullRequest.getFromRef().getBranch().getName(),
