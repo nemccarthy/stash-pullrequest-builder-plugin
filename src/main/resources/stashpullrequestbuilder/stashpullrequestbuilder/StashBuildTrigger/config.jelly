@@ -36,6 +36,9 @@
     <f:entry title="Only build when asked (with test phrase)?" field="onlyBuildOnComment">
       <f:checkbox default="false"/>
     </f:entry>
+    <f:entry title="Do not comment on builds when they start and are completed" field="suppressComments">
+      <f:checkbox default="false"/>
+    </f:entry>
     <f:entry title="CI Build Phrases" field="ciBuildPhrases">
       <f:textbox default="test this please"/>
     </f:entry>

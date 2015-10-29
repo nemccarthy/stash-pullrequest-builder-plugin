@@ -56,20 +56,22 @@ public class StashBuilds {
         else {
             buildUrl = rootUrl + build.getUrl();
         }
-        repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
+        if (!trigger.isSuppressComments()) {
+            repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
 
-        StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
-        String additionalComment = "";
-        if(comments != null) {
-            String buildComment = result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment();
+            StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
+            String additionalComment = "";
+            if (comments != null) {
+                String buildComment = result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment();
 
-            if(buildComment != null && !buildComment.isEmpty()) {
-              additionalComment = "\n\n" + buildComment;
+                if (buildComment != null && !buildComment.isEmpty()) {
+                  additionalComment = "\n\n" + buildComment;
+                }
             }
+            String duration = build.getDurationString();
+            repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
+                    cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl,
+                    build.getNumber(), additionalComment, duration);
         }
-        String duration = build.getDurationString();
-        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
-                cause.getDestinationCommitHash(), result == Result.SUCCESS, buildUrl,
-                build.getNumber(), additionalComment, duration);
     }
 }
