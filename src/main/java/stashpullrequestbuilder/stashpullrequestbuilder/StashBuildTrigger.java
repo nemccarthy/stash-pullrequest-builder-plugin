@@ -153,6 +153,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
         values.put("pullRequestTitle", new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
         values.put("sourceCommitHash", new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
+        values.put("destinationCommitHash", new StringParameterValue("destinationCommitHash", cause.getDestinationCommitHash()));
 
         Map<String, String> additionalParameters = cause.getAdditionalParameters();
         if(additionalParameters != null){
