@@ -2,21 +2,6 @@
   <f:entry title="Cron" field="cron">
     <f:textbox />
   </f:entry>
-  <f:entry title="Stash Host" field="stashHost">
-      <f:textbox />
-  </f:entry>
-  <f:entry title="Stash BasicAuth Username" field="username">
-    <f:textbox />
-  </f:entry>
-  <f:entry title="Stash BasicAuth Password" field="password">
-    <f:password />
-  </f:entry>
-  <f:entry title="Project" field="projectCode">
-    <f:textbox />
-  </f:entry>
-  <f:entry title="RepositoryName" field="repositoryName">
-    <f:textbox />
-  </f:entry>
   <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
     <f:textbox />
   </f:entry>
@@ -24,17 +9,32 @@
     <f:entry title="Ignore ssl certificates?" field="ignoreSsl">
       <f:checkbox default="false"/>
     </f:entry>
+    <f:entry title="Stash Host" field="stashHost">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Stash BasicAuth Username" field="stashUsername">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Stash BasicAuth Password" field="stashPassword">
+      <f:password />
+    </f:entry>
+      <f:entry title="Target branch filter" field="targetBranchFilter">
+    <f:textbox />
+    </f:entry>
+    <f:entry title="Build only 'Merge before build' target branch?" field="checkMergeBeforeBuild">
+      <f:checkbox default="true" />
+    </f:entry>
     <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
       <f:checkbox />
     </f:entry>
     <f:entry title="Build only if Stash reports no conflicts?" field="checkNotConflicted">
-      <f:checkbox default="false"/>
+      <f:checkbox />
     </f:entry>
     <f:entry title="Build only if PR is mergeable?" field="checkMergeable">
-      <f:checkbox default="false"/>
+      <f:checkbox />
     </f:entry>
     <f:entry title="Only build when asked (with test phrase)?" field="onlyBuildOnComment">
-      <f:checkbox default="false"/>
+      <f:checkbox />
     </f:entry>
     <f:entry title="CI Build Phrases" field="ciBuildPhrases">
       <f:textbox default="test this please"/>

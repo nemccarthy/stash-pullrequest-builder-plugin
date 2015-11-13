@@ -14,6 +14,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.io.IOUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
+import org.eclipse.jgit.transport.URIish;
+
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -41,23 +44,44 @@ public class StashApiClient {
     private static final Logger logger = Logger.getLogger(StashApiClient.class.getName());
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private String apiBaseUrl;
+    private final String apiBaseUrl;
+    private final String host;
+    private final String project;
+    private final String repositoryName;
+    private final Credentials credentials;
 
-    private String project;
-    private String repositoryName;
-    private Credentials credentials;
-
-
-    public StashApiClient(String stashHost, String username, String password, String project, String repositoryName, boolean ignoreSsl) {
-        this.credentials = new UsernamePasswordCredentials(username, password);
-        this.project = project;
-        this.repositoryName = repositoryName;
-        this.apiBaseUrl = stashHost.replaceAll("/$", "") + "/rest/api/1.0/projects/";
-        if (ignoreSsl) {
-            Protocol easyhttps = new Protocol("https", (ProtocolSocketFactory) new EasySSLProtocolSocketFactory(), 443);
-            Protocol.registerProtocol("https", easyhttps);
-        }
+    public StashApiClient(URIish stashUri, StandardUsernamePasswordCredentials credentials) {
+        this(null, stashUri, credentials == null ? null : new UsernamePasswordCredentials(
+        		credentials.getUsername(), 
+        		credentials.getPassword().getPlainText()));
     }
+    
+    public StashApiClient(String host, URIish stashUri, UsernamePasswordCredentials credentials) {
+    	// validate stash uri
+    	if (stashUri == null || !stashUri.getPath().startsWith("/scm/")) {
+        	throw new IllegalArgumentException("Invalid stash URI " + stashUri);
+        }
+    	
+        this.credentials = credentials;
+        // split on / after removing prefix /scm/ should give the project name as first entry       
+        this.project = stashUri.getPath().substring(5).split("/")[0];
+        this.repositoryName = stashUri.getHumanishName();
+        // override host if provided
+        this.host = host != null ? host : stashUri.getScheme() + "://" + stashUri.getHost() +	(stashUri.getPort() != -1 ? ":" + stashUri.getPort() : "");
+        this.apiBaseUrl = this.host + "/rest/api/1.0/projects/";
+    }
+    
+    public String getHost() {
+		return host;
+	}
+
+    public String getProject() {
+		return project;
+	}
+
+	public String getRepositoryName() {
+		return repositoryName;
+	}
 
     public List<StashPullRequestResponseValue> getPullRequests() {
         List<StashPullRequestResponseValue> pullRequestResponseValues = new ArrayList<StashPullRequestResponseValue>();
@@ -77,7 +101,7 @@ public class StashApiClient {
         } catch (IOException e) {
             logger.log(Level.WARNING, "invalid pull request response.", e);
         }
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     public List<StashPullRequestComment> getPullRequestComments(String projectCode, String commentRepositoryName,
@@ -102,7 +126,7 @@ public class StashApiClient {
         } catch (Exception e) {
             logger.log(Level.WARNING, "invalid pull request response.", e);
         }
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     public void deletePullRequestComment(String pullRequestId, String commentId) {
@@ -143,6 +167,9 @@ public class StashApiClient {
 
     private HttpClient getHttpClient() {
         HttpClient client = new HttpClient();
+        if (credentials != null) 
+        	client.getState().setCredentials(AuthScope.ANY, credentials);
+        
 //        if (Jenkins.getInstance() != null) {
 //            ProxyConfiguration proxy = Jenkins.getInstance().proxy;
 //            if (proxy != null) {
@@ -164,7 +191,6 @@ public class StashApiClient {
     private String getRequest(String path) {
         logger.log(Level.FINEST, "PR-GET-REQUEST:" + path);
         HttpClient client = getHttpClient();
-        client.getState().setCredentials(AuthScope.ANY, credentials);
         GetMethod httpget = new GetMethod(path);
         client.getParams().setAuthenticationPreemptive(true);
         String response = null;
@@ -190,7 +216,6 @@ public class StashApiClient {
 
     public void deleteRequest(String path) {
         HttpClient client = getHttpClient();
-        client.getState().setCredentials(AuthScope.ANY, credentials);
         DeleteMethod httppost = new DeleteMethod(path);
         client.getParams().setAuthenticationPreemptive(true);
         int res = -1;
@@ -205,7 +230,6 @@ public class StashApiClient {
     private String postRequest(String path, String comment) throws UnsupportedEncodingException {
         logger.log(Level.FINEST, "PR-POST-REQUEST:" + path + " with: " + comment);
         HttpClient client = getHttpClient();
-        client.getState().setCredentials(AuthScope.ANY, credentials);
         PostMethod httppost = new PostMethod(path);
 
         ObjectNode node = mapper.getNodeFactory().objectNode();

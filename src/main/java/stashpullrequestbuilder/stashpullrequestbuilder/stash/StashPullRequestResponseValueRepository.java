@@ -117,6 +117,11 @@ public class StashPullRequestResponseValueRepository {
     public void setLatestCommit(String latestCommit) {
         this.latestCommit = latestCommit;
     }
+
+    @Override
+    public String toString() {
+    	return branch.getName() + " (id: " + id + ", commit: " + commit.getHash() + ", latestChangeset: " + latestChangeset + ")";
+    }
 }
 
 

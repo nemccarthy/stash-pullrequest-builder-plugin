@@ -4,9 +4,11 @@ import antlr.ANTLRException;
 import hudson.Extension;
 import hudson.model.*;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.plugins.git.GitSCM;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -24,13 +26,13 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String projectPath;
     private final String cron;
     private final String stashHost;
-    private final String username;
-    private final String password;
-    private final String projectCode;
-    private final String repositoryName;
+    private final String stashUsername;
+    private final String stashPassword;
+    private final String targetBranchFilter;
     private final String ciSkipPhrases;
     private final String ciBuildPhrases;
     private final boolean ignoreSsl;
+    private final boolean checkMergeBeforeBuild;
     private final boolean checkDestinationCommit;
     private final boolean checkMergeable;
     private final boolean checkNotConflicted;
@@ -46,12 +48,12 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String projectPath,
             String cron,
             String stashHost,
-            String username,
-            String password,
-            String projectCode,
-            String repositoryName,
+            String stashUsername,
+            String stashPassword,
+            String targetBranchFilter,
             String ciSkipPhrases,
             boolean ignoreSsl,
+            boolean checkMergeBeforeBuild,
             boolean checkDestinationCommit,
             boolean checkMergeable,
             boolean checkNotConflicted,
@@ -62,21 +64,17 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.projectPath = projectPath;
         this.cron = cron;
         this.stashHost = stashHost;
-        this.username = username;
-        this.password = password;
-        this.projectCode = projectCode;
-        this.repositoryName = repositoryName;
+        this.stashUsername = stashUsername;
+        this.stashPassword = stashPassword;
+        this.targetBranchFilter = targetBranchFilter;
         this.ciSkipPhrases = ciSkipPhrases;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
         this.ignoreSsl = ignoreSsl;
+        this.checkMergeBeforeBuild = checkMergeBeforeBuild;
         this.checkDestinationCommit = checkDestinationCommit;
         this.checkMergeable = checkMergeable;
         this.checkNotConflicted = checkNotConflicted;
         this.onlyBuildOnComment = onlyBuildOnComment;
-    }
-
-    public String getStashHost() {
-        return stashHost;
     }
 
     public String getProjectPath() {
@@ -87,23 +85,23 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return this.cron;
     }
 
-    public String getUsername() {
-        return username;
-    }
+    public String getStashHost() {
+		return stashHost;
+	}
 
-    public String getPassword() {
-        return password;
-    }
+	public String getStashUsername() {
+		return stashUsername;
+	}
 
-    public String getProjectCode() {
-        return projectCode;
-    }
+	public String getStashPassword() {
+		return stashPassword;
+	}
 
-    public String getRepositoryName() {
-        return repositoryName;
-    }
+	public String getTargetBranchFilter() {
+		return targetBranchFilter;
+	}
 
-    public String getCiSkipPhrases() {
+	public String getCiSkipPhrases() {
         return ciSkipPhrases;
     }
 
@@ -111,7 +109,11 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
     }
 
-    public boolean getCheckDestinationCommit() {
+    public boolean isCheckMergeBeforeBuild() {
+		return checkMergeBeforeBuild;
+	}
+
+	public boolean getCheckDestinationCommit() {
     	return checkDestinationCommit;
     }
 
@@ -122,6 +124,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     @Override
     public void start(AbstractProject<?, ?> project, boolean newInstance) {
         try {
+        	if (!(project.getScm() instanceof GitSCM))
+        		throw new IllegalStateException("No git SCM defined");
+        	
             this.stashPullRequestsBuilder = StashPullRequestsBuilder.getBuilder();
             this.stashPullRequestsBuilder.setProject(project);
             this.stashPullRequestsBuilder.setTrigger(this);
@@ -133,8 +138,8 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         super.start(project, newInstance);
     }
 
-    public static StashBuildTrigger getTrigger(AbstractProject project) {
-        Trigger trigger = project.getTrigger(StashBuildTrigger.class);
+    public static StashBuildTrigger getTrigger(AbstractProject<?, ?> project) {
+        Trigger<?> trigger = project.getTrigger(StashBuildTrigger.class);
         return (StashBuildTrigger)trigger;
     }
 
@@ -143,44 +148,37 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public QueueTaskFuture<?> startJob(StashCause cause) {
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
-        values.put("sourceBranch", new StringParameterValue("sourceBranch", cause.getSourceBranch()));
-        values.put("targetBranch", new StringParameterValue("targetBranch", cause.getTargetBranch()));
-        values.put("projectCode", new StringParameterValue("projectCode", cause.getRepositoryOwner()));
-        values.put("repositoryName", new StringParameterValue("repositoryName", cause.getRepositoryName()));
-        values.put("pullRequestId", new StringParameterValue("pullRequestId", cause.getPullRequestId()));
-        values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
-        values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
-        values.put("pullRequestTitle", new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
-        values.put("sourceCommitHash", new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
-        
+    	logger.info("Scheduling build for " + cause.getShortDescription());
+    	ArrayList<ParameterValue> parameterList = new ArrayList<ParameterValue>();
+    	parameterList.add(new StringParameterValue("sourceProject", cause.getRepositoryOwner()));
+    	parameterList.add(new StringParameterValue("sourceRepository", cause.getRepositoryName()));
+    	parameterList.add(new StringParameterValue("sourceBranch", cause.getSourceBranch()));
+    	parameterList.add(new StringParameterValue("targetProject", cause.getDestinationRepositoryOwner()));
+    	parameterList.add(new StringParameterValue("targetRepository", cause.getDestinationRepositoryName()));
+    	parameterList.add(new StringParameterValue("targetBranch", cause.getTargetBranch()));
+    	parameterList.add(new StringParameterValue("pullRequest", cause.getPullRequestBranch()));
+        parameterList.add(new StringParameterValue("pullRequestId", cause.getPullRequestId()));
+    	parameterList.add(new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
+    	parameterList.add(new StringParameterValue("pullRequestCommit", cause.getSourceCommitHash()));
+
         Map<String, String> additionalParameters = cause.getAdditionalParameters();
         if(additionalParameters != null){
         	for(String parameter : additionalParameters.keySet()){
-        		values.put(parameter, new StringParameterValue(parameter, additionalParameters.get(parameter)));
+                        parameterList.add(new StringParameterValue(parameter, additionalParameters.get(parameter)));
         	}
         }
-        
-        return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList(values.values())));
-    }
 
-    private Map<String, ParameterValue> getDefaultParameters() {
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
-        ParametersDefinitionProperty definitionProperty = this.job.getProperty(ParametersDefinitionProperty.class);
-
-        if (definitionProperty != null) {
-            for (ParameterDefinition definition : definitionProperty.getParameterDefinitions()) {
-                values.put(definition.getName(), definition.getDefaultParameterValue());
-            }
-        }
-        return values;
+    	return this.job.scheduleBuild2(0, cause, new ParametersAction(parameterList));
     }
 
     @Override
     public void run() {
-        if(this.getBuilder().getProject().isDisabled()) {
+    	if(this.getBuilder().getProject().isDisabled()) {
             logger.info("Build Skip.");
         } else {
+        	if (!(this.getBuilder().getProject().getScm() instanceof GitSCM))
+        		throw new IllegalStateException("No git SCM defined");
+        	
             this.stashPullRequestsBuilder.run();
         }
         this.getDescriptor().save();
