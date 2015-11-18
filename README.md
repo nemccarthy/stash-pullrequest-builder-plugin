@@ -34,8 +34,9 @@ The plugin makes available to the job the following parameter variables:
 
 Select *Git* then configure:
 
-- **Repository URL**: `git@example.com:${projectCode}/${repositoryName}.git`
-- **Branch Specifier**: `*/${sourceBranch}`
+- **Repository URL**: `git@example.com:/${destinationRepositoryOwner}/${destinationRepositoryName}.git`
+- **Advance -> Refspec**: `+refs/pull-requests/*:refs/remotes/origin/pr/*`
+- **Branch Specifier**: `origin/pr/${pullRequestId}/from`
 
 **Build Triggers**
 
@@ -57,23 +58,15 @@ Select *Stash Pull Request Builder* then configure:
 - Only build when asked (with test phrase)?:
 - CI Build Phrases:
 
-##Merge the Pull Request's Source Branch into the Target Branch Before Building
+##Building the merge of Source Branch into Target Branch
 
-You may want Jenkins to attempt to merge your PR before doing the build -- this way it will find conflicts for you automatically.
+You may want Jenkins to build the merged PR (that is the merge of `sourceBranch` into `targetBranch`) to catch any issues resulting from this. To do this change the Branch Specifier from `origin/pr/${pullRequestId}/from` to `origin/pr/${pullRequestId}/merge`
 
-- Follow the steps above in "Creating a Job"
-- In the "Source Code Management" > "Git" > "Additional Behaviors" section, click "Add" > "Merge Before Building"
-- In "Name of Repository" put `origin` (or, if not using default name, use your remote repository's name.
-  - Note: unlike in the main part of the Git Repository config, you cannot leave this item blank for "default".)
-- In "Branch to merge to" put `${targetBranch}"`
+If you are building the merged PR you probably want Jenkins to do a new build when the target branch changes. There is an advanced option in the build trigger, "Rebuild if destination branch changes?" which enables this.
 
-Note that as long as you don't push these changes to your remote repository, the merge only happens in your local repository.
+You probably also only want to build if the PR was mergeable, and possibly also without conflicts. There are advanced options in the build trigger for both of these.
 
-If you are merging into your target branch, you might want Jenkins to do a new build of the Pull Request when the target branch changes. There is a advanced option in the build trigger, "Rebuild if destination branch changes?" which enables this.
-
-##Notify Stash Instance (StashNotifier plugin)
-
-If you are using the StashNotifier plugin and have enabled the 'Notify Stash Instance' Post-build Action while also enabled 'Merge before build', you need to set `${sourceCommitHash}` as Commit SHA-1.  This will record the build result against the source commit.
+If you are using the [StashNotifier plugin](https://wiki.jenkins-ci.org/display/JENKINS/StashNotifier+Plugin) and have enabled the 'Notify Stash Instance' Post-build Action while building the merged PR, you need to set `${sourceCommitHash}` as Commit SHA-1 to record the build result against the source commit.
 
 ##Rerun test builds
 
