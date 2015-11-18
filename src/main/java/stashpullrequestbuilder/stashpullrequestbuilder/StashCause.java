@@ -10,8 +10,8 @@ import hudson.model.Cause;
 public class StashCause extends Cause {
     private final String sourceBranch;
     private final String targetBranch;
-    private final String repositoryOwner;
-    private final String repositoryName;
+    private final String sourceRepositoryOwner;
+    private final String sourceRepositoryName;
     private final String pullRequestId;
     private final String destinationRepositoryOwner;
     private final String destinationRepositoryName;
@@ -25,8 +25,8 @@ public class StashCause extends Cause {
     public StashCause(String stashHost,
                           String sourceBranch,
                           String targetBranch,
-                          String repositoryOwner,
-                          String repositoryName,
+                          String sourceRepositoryOwner,
+                          String sourceRepositoryName,
                           String pullRequestId,
                           String destinationRepositoryOwner,
                           String destinationRepositoryName,
@@ -37,8 +37,8 @@ public class StashCause extends Cause {
                           Map<String,String> additionalParameters) {
         this.sourceBranch = sourceBranch;
         this.targetBranch = targetBranch;
-        this.repositoryOwner = repositoryOwner;
-        this.repositoryName = repositoryName;
+        this.sourceRepositoryOwner = sourceRepositoryOwner;
+        this.sourceRepositoryName = sourceRepositoryName;
         this.pullRequestId = pullRequestId;
         this.destinationRepositoryOwner = destinationRepositoryOwner;
         this.destinationRepositoryName = destinationRepositoryName;
@@ -57,12 +57,12 @@ public class StashCause extends Cause {
         return targetBranch;
     }
 
-    public String getRepositoryOwner() {
-        return repositoryOwner;
+    public String getSourceRepositoryOwner() {
+        return sourceRepositoryOwner;
     }
 
-    public String getRepositoryName() {
-        return repositoryName;
+    public String getSourceRepositoryName() {
+        return sourceRepositoryName;
     }
 
     public String getPullRequestId() {

@@ -146,8 +146,8 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
         values.put("sourceBranch", new StringParameterValue("sourceBranch", cause.getSourceBranch()));
         values.put("targetBranch", new StringParameterValue("targetBranch", cause.getTargetBranch()));
-        values.put("projectCode", new StringParameterValue("projectCode", cause.getRepositoryOwner()));
-        values.put("repositoryName", new StringParameterValue("repositoryName", cause.getRepositoryName()));
+        values.put("sourceRepositoryOwner", new StringParameterValue("sourceRepositoryOwner", cause.getSourceRepositoryOwner()));
+        values.put("sourceRepositoryName", new StringParameterValue("sourceRepositoryName", cause.getSourceRepositoryName()));
         values.put("pullRequestId", new StringParameterValue("pullRequestId", cause.getPullRequestId()));
         values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
         values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));

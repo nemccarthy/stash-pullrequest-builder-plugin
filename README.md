@@ -20,8 +20,8 @@ This plugin was inspired by the GitHub & BitBucket pull request builder plugins.
 The plugin makes available to the job the following parameter variables:
 - `${sourceBranch}`
 - `${targetBranch}`
-- `${projectCode}`
-- `${repositoryName}`
+- `${sourceRepositoryOwner}`
+- `${sourceRepositoryName}`
 - `${pullRequestId}`
 - `${destinationRepositoryOwner}`
 - `${destinationReposotryName}`
