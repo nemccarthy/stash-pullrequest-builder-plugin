@@ -48,15 +48,15 @@ Select *Stash Pull Request Builder* then configure:
 - **Stash BasicAuth Password**: password for the given Username
 - **Project**: abbreviated project code. eg: *PRJ* or *~user*
 - **RepositoryName**: eg: *Repo*
-- **CI Skip Phrases**: optional. eg: *"Don't test"*
 
 **Advanced options**
 - Ignore ssl certificates:
-- Rebuild if destination branch changes?:
-- Build only if Stash reports no conflicts?:
-- Build only if PR is mergeable?:
-- Only build when asked (with test phrase)?:
-- CI Build Phrases:
+- Rebuild if destination branch changes:
+- Build only if Stash reports no conflicts:
+- Build only if PR is mergeable:
+- CI Skip Phrases: default: "NO TEST"
+- Only build when asked (with test phrase):
+- CI Build Phrases: default: "test this please"
 
 ##Building the merge of Source Branch into Target Branch
 

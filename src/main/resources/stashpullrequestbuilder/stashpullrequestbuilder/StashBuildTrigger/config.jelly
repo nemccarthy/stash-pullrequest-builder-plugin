@@ -14,26 +14,26 @@
   <f:entry title="Project" field="projectCode">
     <f:textbox />
   </f:entry>
-  <f:entry title="RepositoryName" field="repositoryName">
-    <f:textbox />
-  </f:entry>
-  <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
+  <f:entry title="Repository Name" field="repositoryName">
     <f:textbox />
   </f:entry>
   <f:advanced>
-    <f:entry title="Ignore ssl certificates?" field="ignoreSsl">
+    <f:entry title="Ignore ssl certificates" field="ignoreSsl">
       <f:checkbox default="false"/>
     </f:entry>
-    <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
+    <f:entry title="Rebuild if destination branch changes" field="checkDestinationCommit">
       <f:checkbox />
     </f:entry>
-    <f:entry title="Build only if Stash reports no conflicts?" field="checkNotConflicted">
+    <f:entry title="Build only if Stash reports no conflicts" field="checkNotConflicted">
       <f:checkbox default="false"/>
     </f:entry>
-    <f:entry title="Build only if PR is mergeable?" field="checkMergeable">
+    <f:entry title="Build only if PR is mergeable" field="checkMergeable">
       <f:checkbox default="false"/>
     </f:entry>
-    <f:entry title="Only build when asked (with test phrase)?" field="onlyBuildOnComment">
+        <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
+      <f:textbox default="NO TEST" />
+    </f:entry>
+    <f:entry title="Only build when asked (with test phrase)" field="onlyBuildOnComment">
       <f:checkbox default="false"/>
     </f:entry>
     <f:entry title="CI Build Phrases" field="ciBuildPhrases">
