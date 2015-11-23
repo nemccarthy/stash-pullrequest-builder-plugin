@@ -137,7 +137,9 @@ public class StashRepository {
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
-            deletePreviousBuildFinishedComments(pullRequest);
+                if (trigger.getDeletePreviousBuildFinishComments()) {
+                    deletePreviousBuildFinishedComments(pullRequest);
+                }
             String commentId = postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
