@@ -137,6 +137,7 @@ public class StashRepository {
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
+            deletePreviousBuildFinishedComments(pullRequest);
             String commentId = postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
@@ -182,6 +183,34 @@ public class StashRepository {
                 return !mergable.getConflicted();
         }
         return true;
+    }
+
+    private void deletePreviousBuildFinishedComments(StashPullRequestResponseValue pullRequest) {
+
+        StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+        String owner = destination.getRepository().getProjectName();
+        String repositoryName = destination.getRepository().getRepositoryName();
+        String id = pullRequest.getId();
+
+        List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
+
+        if (comments != null) {
+            Collections.sort(comments);
+                Collections.reverse(comments);
+                for (StashPullRequestComment comment : comments) {
+                    String content = comment.getText();
+                    if (content == null || content.isEmpty()) {
+                        continue;
+                    }
+
+                    String project_build_finished = String.format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
+                    Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
+
+                    if (finishMatcher.find()) {
+                        deletePullRequestComment(pullRequest.getId(), comment.getCommentId().toString());
+                    }
+                }
+        }
     }
 
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
