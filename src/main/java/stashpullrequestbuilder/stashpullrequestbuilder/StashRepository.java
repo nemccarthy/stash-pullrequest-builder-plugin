@@ -221,14 +221,17 @@ public class StashRepository {
 
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as title contained skip phrase");
                 return false;
             }
 
             if (!isForTargetBranch(pullRequest)) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as targeting branch: " + pullRequest.getToRef().getBranch().getName());
                 return false;
             }
 
             if(!isPullRequestMergable(pullRequest)) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as cannot be merged");
                 return false;
             }
 
