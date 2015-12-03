@@ -224,6 +224,10 @@ public class StashRepository {
                 return false;
             }
 
+            if (!isForTargetBranch(pullRequest)) {
+                return false;
+            }
+
             if(!isPullRequestMergable(pullRequest)) {
                 return false;
             }
@@ -292,6 +296,20 @@ public class StashRepository {
             }
         }
         return shouldBuild;
+    }
+
+    private boolean isForTargetBranch(StashPullRequestResponseValue pullRequest) {
+        String targetBranchesToBuild = this.trigger.getTargetBranchesToBuild();
+        if (targetBranchesToBuild !=null && !"".equals(targetBranchesToBuild)) {
+            String[] branches = targetBranchesToBuild.split(",");
+            for(String branch : branches) {
+                if (pullRequest.getToRef().getBranch().getName().equalsIgnoreCase(branch.trim())) {
+                    return true;
+                }
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean isSkipBuild(String pullRequestTitle) {

@@ -39,6 +39,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String repositoryName;
     private final String ciSkipPhrases;
     private final String ciBuildPhrases;
+    private final String targetBranchesToBuild;
     private final boolean ignoreSsl;
     private final boolean checkDestinationCommit;
     private final boolean checkMergeable;
@@ -66,7 +67,8 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             boolean checkNotConflicted,
             boolean onlyBuildOnComment,
             String ciBuildPhrases,
-            boolean deletePreviousBuildFinishComments
+            boolean deletePreviousBuildFinishComments,
+            String targetBranchesToBuild
             ) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
@@ -83,6 +85,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.checkNotConflicted = checkNotConflicted;
         this.onlyBuildOnComment = onlyBuildOnComment;
         this.deletePreviousBuildFinishComments = deletePreviousBuildFinishComments;
+        this.targetBranchesToBuild = targetBranchesToBuild;
     }
 
     public String getStashHost() {
@@ -143,6 +146,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public boolean getDeletePreviousBuildFinishComments() {
         return deletePreviousBuildFinishComments;
+    }
+
+    public String getTargetBranchesToBuild() {
+        return targetBranchesToBuild;
     }
 
     @Override
