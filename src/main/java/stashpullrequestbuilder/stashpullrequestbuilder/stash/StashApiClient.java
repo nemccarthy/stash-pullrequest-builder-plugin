@@ -231,7 +231,7 @@ public class StashApiClient {
             StringWriter stringWriter = new StringWriter();
             IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
             response = stringWriter.toString();
-            logger.info("API Request Response: " + response);
+            logger.log(Level.FINEST, "API Request Response: " + response);
         }  catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to process PR get request; " + path, e);
