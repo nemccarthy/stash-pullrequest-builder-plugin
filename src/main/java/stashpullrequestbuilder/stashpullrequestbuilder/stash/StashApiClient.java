@@ -121,7 +121,7 @@ public class StashApiClient {
             e.printStackTrace();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Failed to post Stash PR comment " + path + " " + e);
         }
         return null;
     }
@@ -136,7 +136,7 @@ public class StashApiClient {
             e.printStackTrace();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.WARNING, "Failed to get Stash PR Merge Status " + path + " " + e);
         }
         return null;
     }
@@ -181,7 +181,7 @@ public class StashApiClient {
         }
         logger.log(Level.FINEST, "PR-GET-RESPONSE:" + response);
         if (!validResponseCode(responseCode)) {
-            logger.log(Level.SEVERE, "Failing to get response from Stash PR GET" + path);
+            logger.log(Level.SEVERE, "Failing to get response from Stash PR GET " + path);
             throw new RuntimeException("Didn't get a 200 response from Stash PR GET! Response; '" +
                     HttpStatus.getStatusText(responseCode) + "' with message; " + response);
         }
@@ -197,7 +197,7 @@ public class StashApiClient {
         try {
             res = client.executeMethod(httppost);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Failed to delete Stash PR comment " + path);
         }
         logger.log(Level.FINE, "Delete comment {" + path + "} returned result code; " + res);
     }
