@@ -3,7 +3,7 @@ package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 import org.junit.Before;
 import org.junit.Test;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test for checking the logic inside the StashPullRequestResponseValueRepository class.
