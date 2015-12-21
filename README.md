@@ -18,15 +18,16 @@ This plugin was inspired by the GitHub & BitBucket pull request builder plugins.
 ##Parameter variables
 
 The plugin makes available to the job the following parameter variables:
+- `${pullRequestId}`
+- `${pullRequestTitle}`
 - `${sourceBranch}`
 - `${targetBranch}`
 - `${sourceRepositoryOwner}`
 - `${sourceRepositoryName}`
-- `${pullRequestId}`
 - `${destinationRepositoryOwner}`
-- `${destinationReposotryName}`
-- `${pullRequestTitle}`
+- `${destinationRepositoryName}`
 - `${sourceCommitHash}`
+- `${destinationCommitHash}`
 
 ##Creating a Job
 
