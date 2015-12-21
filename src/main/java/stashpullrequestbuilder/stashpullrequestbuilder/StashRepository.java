@@ -137,6 +137,9 @@ public class StashRepository {
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
+                if (trigger.getDeletePreviousBuildFinishComments()) {
+                    deletePreviousBuildFinishedComments(pullRequest);
+                }
             String commentId = postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
@@ -184,16 +187,51 @@ public class StashRepository {
         return true;
     }
 
+    private void deletePreviousBuildFinishedComments(StashPullRequestResponseValue pullRequest) {
+
+        StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+        String owner = destination.getRepository().getProjectName();
+        String repositoryName = destination.getRepository().getRepositoryName();
+        String id = pullRequest.getId();
+
+        List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
+
+        if (comments != null) {
+            Collections.sort(comments);
+                Collections.reverse(comments);
+                for (StashPullRequestComment comment : comments) {
+                    String content = comment.getText();
+                    if (content == null || content.isEmpty()) {
+                        continue;
+                    }
+
+                    String project_build_finished = String.format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
+                    Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
+
+                    if (finishMatcher.find()) {
+                        deletePullRequestComment(pullRequest.getId(), comment.getCommentId().toString());
+                    }
+                }
+        }
+    }
+
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
 
         boolean shouldBuild = true;
 
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as title contained skip phrase");
+                return false;
+            }
+
+            if (!isForTargetBranch(pullRequest)) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as targeting branch: " + pullRequest.getToRef().getBranch().getName());
                 return false;
             }
 
             if(!isPullRequestMergable(pullRequest)) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as cannot be merged");
                 return false;
             }
 
@@ -261,6 +299,20 @@ public class StashRepository {
             }
         }
         return shouldBuild;
+    }
+
+    private boolean isForTargetBranch(StashPullRequestResponseValue pullRequest) {
+        String targetBranchesToBuild = this.trigger.getTargetBranchesToBuild();
+        if (targetBranchesToBuild !=null && !"".equals(targetBranchesToBuild)) {
+            String[] branches = targetBranchesToBuild.split(",");
+            for(String branch : branches) {
+                if (pullRequest.getToRef().getBranch().getName().equalsIgnoreCase(branch.trim())) {
+                    return true;
+                }
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean isSkipBuild(String pullRequestTitle) {
