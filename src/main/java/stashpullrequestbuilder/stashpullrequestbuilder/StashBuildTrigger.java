@@ -1,13 +1,23 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
 import antlr.ANTLRException;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
 import hudson.model.*;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
+import hudson.util.ListBoxModel;
 import net.sf.json.JSONObject;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.ArrayList;
@@ -24,8 +34,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final String projectPath;
     private final String cron;
     private final String stashHost;
-    private final String username;
-    private final String password;
+    private final String credentialsId;
     private final String projectCode;
     private final String repositoryName;
     private final String ciSkipPhrases;
@@ -46,8 +55,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String projectPath,
             String cron,
             String stashHost,
-            String username,
-            String password,
+            String credentialsId,
             String projectCode,
             String repositoryName,
             String ciSkipPhrases,
@@ -62,8 +70,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.projectPath = projectPath;
         this.cron = cron;
         this.stashHost = stashHost;
-        this.username = username;
-        this.password = password;
+        this.credentialsId = credentialsId;
         this.projectCode = projectCode;
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
@@ -87,12 +94,24 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return this.cron;
     }
 
+    // Needed for Jelly Config
+    public String getcredentialsId() {
+    	return this.credentialsId;
+    }
+
+    private StandardUsernamePasswordCredentials getCredentials() {
+        return CredentialsMatchers.firstOrNull(
+                          CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, this.job, ACL.SYSTEM,
+                                                                URIRequirementBuilder.fromUri(stashHost).build()),
+                          CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
+    }
+
     public String getUsername() {
-        return username;
+        return this.getCredentials().getUsername();
     }
 
     public String getPassword() {
-        return password;
+        return this.getCredentials().getPassword().getPlainText();
     }
 
     public String getProjectCode() {
@@ -146,8 +165,8 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
         values.put("sourceBranch", new StringParameterValue("sourceBranch", cause.getSourceBranch()));
         values.put("targetBranch", new StringParameterValue("targetBranch", cause.getTargetBranch()));
-        values.put("projectCode", new StringParameterValue("projectCode", cause.getRepositoryOwner()));
-        values.put("repositoryName", new StringParameterValue("repositoryName", cause.getRepositoryName()));
+        values.put("sourceRepositoryOwner", new StringParameterValue("sourceRepositoryOwner", cause.getSourceRepositoryOwner()));
+        values.put("sourceRepositoryName", new StringParameterValue("sourceRepositoryName", cause.getSourceRepositoryName()));
         values.put("pullRequestId", new StringParameterValue("pullRequestId", cause.getPullRequestId()));
         values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
         values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
@@ -222,6 +241,14 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
             save();
             return super.configure(req, json);
+        }
+
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item context, @QueryParameter String source) {
+            if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+                return new ListBoxModel();
+            }
+            return new StandardUsernameListBoxModel().withEmptySelection().withAll(
+               CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build()));
         }
     }
 }
