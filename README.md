@@ -75,13 +75,51 @@ If you want to rerun pull request test, write *"test this please"* comment to yo
 
 ##Adding additional parameters to a build
 
-If you want to add additional parameters to the triggered build, add comments using the pattern `p:<parameter_name>=<value>`, one at each line, prefixed with `p:`. If the same parameter name appears multiple times the latest comment with that parameter will decide the value.
+If you want to add additional parameters to the triggered build, add parameters using the pattern `p:<parameter_name>=<value>` one at each line to the Description field or add comments after creating the pull request. If the same parameter name appears multiple times the latest comment with that parameter will decide the value. 
 
 **Example:**
 
     test this please
     p:country=USA
     p:env=dev1
+
+##Checking for additional parameters in Jenkins
+
+Checking for optional parameters in Jenkins requires some scripting, one option is to use the [EnvInject Plugin](https://wiki.jenkins-ci.org/display/JENKINS/EnvInject+Plugin) and write a script to check for optional parameters.
+
+**Example:**
+
+    import hudson.model.*
+
+    def result = [:]
+
+    // set up the default parameters
+    result["country"] = 'Island'
+    result["env"] = "dev0"
+
+    // get current thread / Executor
+    def thr = Thread.currentThread()
+    if(thr != null){
+
+        // get current build
+        def build = thr.executable
+        if(build != null){
+
+            def resolver = build.buildVariableResolver
+            def conf_country = resolver.resolve("country")
+            def conf_env = resolver.resolve("env")
+
+            if (conf_country != null) {
+                result["country"] = conf_country
+            }
+
+            if (conf_env != null) {
+                result["env"] = conf_env 
+            }
+        }
+    }
+
+    return result
 
 
 ## Post Build Comment
