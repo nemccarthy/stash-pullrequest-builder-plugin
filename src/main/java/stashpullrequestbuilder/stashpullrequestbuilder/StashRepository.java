@@ -106,7 +106,17 @@ public class StashRepository {
    }
     
     public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest){
+    	Map<String, String> result = new TreeMap<String, String>();
+    	
         StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+        String description = pullRequest.getDescription();
+        if(description != null && description.length() > 0){
+	        Map<String,String> parameters = getParametersFromContent(description);
+	        for(String key : parameters.keySet()){
+	        	result.put(key, parameters.get(key));
+	        }
+        }
+
         String owner = destination.getRepository().getProjectName();
         String repositoryName = destination.getRepository().getRepositoryName();
 
@@ -114,10 +124,7 @@ public class StashRepository {
         List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
         if (comments != null) {
             Collections.sort(comments);
-//          Collections.reverse(comments);
 
-            Map<String, String> result = new TreeMap<String, String>();
-            
             for (StashPullRequestComment comment : comments) {
                 String content = comment.getText();
                 if (content == null || content.isEmpty()) {
@@ -129,9 +136,8 @@ public class StashRepository {
                 	result.put(key, parameters.get(key));
                 }
             }
-            return result;
         }
-        return null;
+        return result;
     }
     
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
