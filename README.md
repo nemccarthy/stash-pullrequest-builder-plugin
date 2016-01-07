@@ -10,12 +10,12 @@ This plugin was inspired by the GitHub & BitBucket pull request builder plugins.
 - See this [blogpost](http://blog.nemccarthy.me/?p=387) for more details
 
 
-##Prerequisites
+## Prerequisites
 
 - Jenkins 1.532 or higher.
 - [Git Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Git+Plugin)
 
-##Parameter variables
+## Parameter variables
 
 The plugin makes available to the job the following parameter variables:
 - `${pullRequestId}`
@@ -29,7 +29,7 @@ The plugin makes available to the job the following parameter variables:
 - `${sourceCommitHash}`
 - `${destinationCommitHash}`
 
-##Creating a Job
+## Creating a Job
 
 **Source Code Management**
 
@@ -58,8 +58,9 @@ Select *Stash Pull Request Builder* then configure:
 - CI Skip Phrases: default: "NO TEST"
 - Only build when asked (with test phrase):
 - CI Build Phrases: default: "test this please"
+- Target branches: a comma separated list of branches (e.g. brancha,branchb)
 
-##Building the merge of Source Branch into Target Branch
+## Building the merge of Source Branch into Target Branch
 
 You may want Jenkins to build the merged PR (that is the merge of `sourceBranch` into `targetBranch`) to catch any issues resulting from this. To do this change the Branch Specifier from `origin/pr/${pullRequestId}/from` to `origin/pr/${pullRequestId}/merge`
 
@@ -69,7 +70,7 @@ You probably also only want to build if the PR was mergeable, and possibly also 
 
 If you are using the [StashNotifier plugin](https://wiki.jenkins-ci.org/display/JENKINS/StashNotifier+Plugin) and have enabled the 'Notify Stash Instance' Post-build Action while building the merged PR, you need to set `${sourceCommitHash}` as Commit SHA-1 to record the build result against the source commit.
 
-##Rerun test builds
+## Rerun test builds
 
 If you want to rerun pull request test, write *"test this please"* comment to your pull request.
 
@@ -91,11 +92,11 @@ These comments can contain environment variables that will be translated when po
 
 This feature can be used to post for instance a url to the deployed application or code coverage at a successful build and why the build failed like what tests that did not pass.
 
-##Copyright
+## Copyright
 
 Copyright © 2015 Nathan McCarthy.
 
 
-##License
+## License
 
 - BSD License

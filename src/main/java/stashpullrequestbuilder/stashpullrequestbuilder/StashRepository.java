@@ -309,8 +309,8 @@ public class StashRepository {
                 if (pullRequest.getToRef().getBranch().getName().equalsIgnoreCase(branch.trim())) {
                     return true;
                 }
-                return false;
             }
+            return false;
         }
         return true;
     }
