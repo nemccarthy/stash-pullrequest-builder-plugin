@@ -306,7 +306,7 @@ public class StashRepository {
         if (targetBranchesToBuild !=null && !"".equals(targetBranchesToBuild)) {
             String[] branches = targetBranchesToBuild.split(",");
             for(String branch : branches) {
-                if (pullRequest.getToRef().getBranch().getName().equalsIgnoreCase(branch.trim())) {
+                if (pullRequest.getToRef().getBranch().getName().matches(branch.trim())) {
                     return true;
                 }
             }
