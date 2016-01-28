@@ -1,5 +1,7 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import hudson.model.Result;
+
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
@@ -34,6 +36,9 @@ public class StashRepository {
     public static final String BUILD_SUCCESS_COMMENT =  "✓ BUILD SUCCESS";
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
     public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
+    public static final String BUILD_UNSTABLE_COMMENT = "⁉ BUILD UNSTABLE";
+    public static final String BUILD_ABORTED_COMMENT = "‼ BUILD ABORTED";
+    public static final String BUILD_NOTBUILT_COMMENT = "✕ BUILD INCOMPLETE";
 
     public static final String ADDITIONAL_PARAMETER_REGEX = "^p:(([A-Za-z_0-9])+)=(.*)";
     public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX);
@@ -164,11 +169,25 @@ public class StashRepository {
         this.client.deletePullRequestComment(pullRequestId, commentId);
     }
 
-    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber, String additionalComment, String duration) {
+    private String getMessageForBuildResult(Result result) {
         String message = BUILD_FAILURE_COMMENT;
-        if (success){
+        if (result == Result.SUCCESS) {
             message = BUILD_SUCCESS_COMMENT;
         }
+        if (result == Result.UNSTABLE) {
+            message = BUILD_UNSTABLE_COMMENT;
+        }
+        if (result == Result.ABORTED) {
+            message = BUILD_ABORTED_COMMENT;
+        }
+        if (result == Result.NOT_BUILT) {
+            message = BUILD_NOTBUILT_COMMENT;
+        }
+        return message;
+    }
+    
+    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, Result buildResult, String buildUrl, int buildNumber, String additionalComment, String duration) {
+        String message = getMessageForBuildResult(buildResult);
         String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
 
         comment = comment.concat(additionalComment);
