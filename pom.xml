@@ -8,7 +8,7 @@
 
   <artifactId>stash-pullrequest-builder</artifactId>
   <name>Stash Pullrequest Builder Plugin</name>
-  <version>1.5.3</version>
+  <version>1.5.4-SNAPSHOT</version>
   <description>This Jenkins plugin builds pull requests from Stash and will report the test results.</description>
   <packaging>hpi</packaging>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Stash+pullrequest+builder+plugin</url>
@@ -17,7 +17,7 @@
         <connection>scm:git:ssh://github.com/jenkinsci/stash-pullrequest-builder-plugin.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/jenkinsci/stash-pullrequest-builder-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/stash-pullrequest-builder-plugin</url>
-      <tag>stash-pullrequest-builder-1.5.3</tag>
+      <tag>HEAD</tag>
   </scm>
   <developers>
     <developer>
