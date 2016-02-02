@@ -51,7 +51,7 @@ Select *Stash Pull Request Builder* then configure:
 
 **Advanced options**
 - Ignore ssl certificates:
-- Build PR targetting only these branches: common separated list of branch names. Blank for all.
+- Build PR targetting only these branches: common separated list of branch names (or regexes). Blank for all.
 - Rebuild if destination branch changes:
 - Build only if Stash reports no conflicts:
 - Build only if PR is mergeable:
