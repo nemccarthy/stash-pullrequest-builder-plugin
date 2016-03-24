@@ -1,5 +1,7 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import static java.lang.String.format;
+
 import antlr.ANTLRException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -213,7 +215,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     @Override
     public void run() {
         if(this.getBuilder().getProject().isDisabled()) {
-            logger.info("Build Skip.");
+            logger.info(format("Build Skip (%s).", getBuilder().getProject().getName()));
         } else {
             this.stashPullRequestsBuilder.run();
         }
