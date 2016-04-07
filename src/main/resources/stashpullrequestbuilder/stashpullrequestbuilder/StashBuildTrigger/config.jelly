@@ -1,39 +1,42 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
   <f:entry title="Cron" field="cron">
     <f:textbox />
   </f:entry>
   <f:entry title="Stash Host" field="stashHost">
       <f:textbox />
   </f:entry>
-  <f:entry title="Stash BasicAuth Username" field="username">
-    <f:textbox />
-  </f:entry>
-  <f:entry title="Stash BasicAuth Password" field="password">
-    <f:password />
+  <f:entry title="Stash Credentials" field="credentialsId">
+    <c:select />
   </f:entry>
   <f:entry title="Project" field="projectCode">
     <f:textbox />
   </f:entry>
-  <f:entry title="RepositoryName" field="repositoryName">
-    <f:textbox />
-  </f:entry>
-  <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
+  <f:entry title="Repository Name" field="repositoryName">
     <f:textbox />
   </f:entry>
   <f:advanced>
-    <f:entry title="Ignore ssl certificates?" field="ignoreSsl">
+    <f:entry title="Ignore ssl certificates" field="ignoreSsl">
       <f:checkbox default="false"/>
     </f:entry>
-    <f:entry title="Rebuild if destination branch changes?" field="checkDestinationCommit">
+    <f:entry title="Build PR targetting only these branches" field="targetBranchesToBuild">
+      <f:textbox default="" />
+    </f:entry>
+    <f:entry title="Rebuild if destination branch changes" field="checkDestinationCommit">
       <f:checkbox />
     </f:entry>
-    <f:entry title="Build only if Stash reports no conflicts?" field="checkNotConflicted">
+    <f:entry title="Build only if Stash reports no conflicts" field="checkNotConflicted">
       <f:checkbox default="false"/>
     </f:entry>
-    <f:entry title="Build only if PR is mergeable?" field="checkMergeable">
+    <f:entry title="Build only if PR is mergeable" field="checkMergeable">
       <f:checkbox default="false"/>
     </f:entry>
-    <f:entry title="Only build when asked (with test phrase)?" field="onlyBuildOnComment">
+    <f:entry title="Keep PR comment only for most recent Build" field="deletePreviousBuildFinishComments">
+      <f:checkbox default="false"/>
+    </f:entry>
+    <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
+      <f:textbox default="NO TEST" />
+    </f:entry>
+    <f:entry title="Only build when asked (with test phrase)" field="onlyBuildOnComment">
       <f:checkbox default="false"/>
     </f:entry>
     <f:entry title="CI Build Phrases" field="ciBuildPhrases">

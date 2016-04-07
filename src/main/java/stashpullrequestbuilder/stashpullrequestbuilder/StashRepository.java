@@ -1,5 +1,7 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import hudson.model.Result;
+
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
@@ -34,6 +36,9 @@ public class StashRepository {
     public static final String BUILD_SUCCESS_COMMENT =  "✓ BUILD SUCCESS";
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
     public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
+    public static final String BUILD_UNSTABLE_COMMENT = "⁉ BUILD UNSTABLE";
+    public static final String BUILD_ABORTED_COMMENT = "‼ BUILD ABORTED";
+    public static final String BUILD_NOTBUILT_COMMENT = "✕ BUILD INCOMPLETE";
 
     public static final String ADDITIONAL_PARAMETER_REGEX = "^p:(([A-Za-z_0-9])+)=(.*)";
     public static final Pattern ADDITIONAL_PARAMETER_REGEX_PATTERN = Pattern.compile(ADDITIONAL_PARAMETER_REGEX);
@@ -137,6 +142,9 @@ public class StashRepository {
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
+                if (trigger.getDeletePreviousBuildFinishComments()) {
+                    deletePreviousBuildFinishedComments(pullRequest);
+                }
             String commentId = postBuildStartCommentTo(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
@@ -161,11 +169,25 @@ public class StashRepository {
         this.client.deletePullRequestComment(pullRequestId, commentId);
     }
 
-    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, boolean success, String buildUrl, int buildNumber, String additionalComment, String duration) {
+    private String getMessageForBuildResult(Result result) {
         String message = BUILD_FAILURE_COMMENT;
-        if (success){
+        if (result == Result.SUCCESS) {
             message = BUILD_SUCCESS_COMMENT;
         }
+        if (result == Result.UNSTABLE) {
+            message = BUILD_UNSTABLE_COMMENT;
+        }
+        if (result == Result.ABORTED) {
+            message = BUILD_ABORTED_COMMENT;
+        }
+        if (result == Result.NOT_BUILT) {
+            message = BUILD_NOTBUILT_COMMENT;
+        }
+        return message;
+    }
+    
+    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, Result buildResult, String buildUrl, int buildNumber, String additionalComment, String duration) {
+        String message = getMessageForBuildResult(buildResult);
         String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
 
         comment = comment.concat(additionalComment);
@@ -184,16 +206,51 @@ public class StashRepository {
         return true;
     }
 
+    private void deletePreviousBuildFinishedComments(StashPullRequestResponseValue pullRequest) {
+
+        StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+        String owner = destination.getRepository().getProjectName();
+        String repositoryName = destination.getRepository().getRepositoryName();
+        String id = pullRequest.getId();
+
+        List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
+
+        if (comments != null) {
+            Collections.sort(comments);
+                Collections.reverse(comments);
+                for (StashPullRequestComment comment : comments) {
+                    String content = comment.getText();
+                    if (content == null || content.isEmpty()) {
+                        continue;
+                    }
+
+                    String project_build_finished = String.format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
+                    Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
+
+                    if (finishMatcher.find()) {
+                        deletePullRequestComment(pullRequest.getId(), comment.getCommentId().toString());
+                    }
+                }
+        }
+    }
+
     private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
 
         boolean shouldBuild = true;
 
         if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
             if (isSkipBuild(pullRequest.getTitle())) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as title contained skip phrase");
+                return false;
+            }
+
+            if (!isForTargetBranch(pullRequest)) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as targeting branch: " + pullRequest.getToRef().getBranch().getName());
                 return false;
             }
 
             if(!isPullRequestMergable(pullRequest)) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as cannot be merged");
                 return false;
             }
 
@@ -261,6 +318,20 @@ public class StashRepository {
             }
         }
         return shouldBuild;
+    }
+
+    private boolean isForTargetBranch(StashPullRequestResponseValue pullRequest) {
+        String targetBranchesToBuild = this.trigger.getTargetBranchesToBuild();
+        if (targetBranchesToBuild !=null && !"".equals(targetBranchesToBuild)) {
+            String[] branches = targetBranchesToBuild.split(",");
+            for(String branch : branches) {
+                if (pullRequest.getToRef().getBranch().getName().matches(branch.trim())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     private boolean isSkipBuild(String pullRequestTitle) {

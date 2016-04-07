@@ -132,7 +132,7 @@ public class StashApiClient {
             e.printStackTrace();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Failed to post Stash PR comment " + path + " " + e);
         }
         return null;
     }
@@ -147,7 +147,7 @@ public class StashApiClient {
             e.printStackTrace();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.WARNING, "Failed to get Stash PR Merge Status " + path + " " + e);
         }
         return null;
     }
@@ -207,7 +207,7 @@ public class StashApiClient {
             		String response = null;
             		int responseCode = HttpStatus.SC_INTERNAL_SERVER_ERROR;
                     responseCode = client.executeMethod(httpget);
-                    if (responseCode != HttpStatus.SC_OK) {
+                    if (!validResponseCode(responseCode)) {
                         logger.log(Level.SEVERE, "Failing to get response from Stash PR GET" + httpget.getPath());
                         throw new RuntimeException("Didn't get a 200 response from Stash PR GET! Response; '" +
                                 HttpStatus.getStatusText(responseCode) + "' with message; " + response);
@@ -262,7 +262,7 @@ public class StashApiClient {
         Thread thread;
 
         try {
-            //Run the http request in a future task so we have the opportunity
+          //Run the http request in a future task so we have the opportunity
         	//to cancel it if it gets hung up; which is possible if stuck at
         	//socket native layer.  see issue JENKINS-30558
         	httpTask = new FutureTask<Integer>(new Callable<Integer>() {
@@ -334,7 +334,7 @@ public class StashApiClient {
         Thread thread;
 
         try {
-            //Run the http request in a future task so we have the opportunity
+          //Run the http request in a future task so we have the opportunity
         	//to cancel it if it gets hung up; which is possible if stuck at
         	//socket native layer.  see issue JENKINS-30558
             httpTask = new FutureTask<String>(new Callable<String>() {
@@ -348,7 +348,7 @@ public class StashApiClient {
                 	int responseCode = HttpStatus.SC_INTERNAL_SERVER_ERROR;
                 	
                     responseCode = client.executeMethod(httppost);
-                    if (responseCode != HttpStatus.SC_OK) {
+                    if (!validResponseCode(responseCode)) {
                         logger.log(Level.SEVERE, "Failing to get response from Stash PR POST" + httppost.getPath());
                         throw new RuntimeException("Didn't get a 200 response from Stash PR POST! Response; '" +
                                 HttpStatus.getStatusText(responseCode) + "' with message; " + response);
@@ -379,15 +379,23 @@ public class StashApiClient {
             httppost.abort();
             throw new RuntimeException(e);
         } catch (Exception e) {
-        	e.printStackTrace();
-        	throw new RuntimeException(e);
+           e.printStackTrace();
+           throw new RuntimeException(e);
         } finally {
-        	httppost.releaseConnection();
+        	  httppost.releaseConnection();
         }
                 
         logger.log(Level.FINEST, "PR-POST-RESPONSE:" + response);
-
+        
         return response;
+    }
+
+    private boolean validResponseCode(int responseCode) {
+        return responseCode == HttpStatus.SC_OK ||
+                responseCode == HttpStatus.SC_ACCEPTED ||
+                responseCode == HttpStatus.SC_CREATED ||
+                responseCode == HttpStatus.SC_NO_CONTENT ||
+                responseCode == HttpStatus.SC_RESET_CONTENT ;
     }
 
     private StashPullRequestResponse parsePullRequestJson(String response) throws IOException {
