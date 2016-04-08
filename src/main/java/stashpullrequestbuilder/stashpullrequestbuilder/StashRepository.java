@@ -2,11 +2,7 @@ package stashpullrequestbuilder.stashpullrequestbuilder;
 
 import hudson.model.Result;
 
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.*;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -84,6 +80,15 @@ public class StashRepository {
             return commentResponse.getCommentId().toString();
     }
 
+    private void postBuildStatusInProgress(StashPullRequestResponseValue pullRequest) {
+        String sourceCommit = pullRequest.getFromRef().getLatestCommit();
+        StashCommitBuildState buildState = StashCommitBuildState.INPROGRESS;
+        String jobName = this.builder.getProject().getName();
+        String jobUrl = this.builder.getProject().getAbsoluteUrl();
+        StashCommitBuildStatus buildStatus = new StashCommitBuildStatus(buildState, jobName, null, jobUrl, null);
+        this.client.postCommitBuildStatus(sourceCommit, buildStatus);
+    }
+
     public static AbstractMap.SimpleEntry<String,String> getParameter(String content){
     	if(content.isEmpty()){
     		return null;
@@ -146,6 +151,7 @@ public class StashRepository {
                     deletePreviousBuildFinishedComments(pullRequest);
                 }
             String commentId = postBuildStartCommentTo(pullRequest);
+            postBuildStatusInProgress(pullRequest);
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
                     pullRequest.getFromRef().getBranch().getName(),
@@ -164,6 +170,8 @@ public class StashRepository {
 
         }
     }
+
+
 
     public void deletePullRequestComment(String pullRequestId, String commentId) {
         this.client.deletePullRequestComment(pullRequestId, commentId);
@@ -193,6 +201,18 @@ public class StashRepository {
         comment = comment.concat(additionalComment);
 
         this.client.postPullRequestComment(pullRequestId, comment);
+    }
+
+    public void postFinishedBuildStatus(String jobName, String buildId, String sourceCommit, Result buildResult,  String buildUrl) {
+        StashCommitBuildState buildState;
+        if(buildResult == Result.SUCCESS){
+            buildState = StashCommitBuildState.SUCCESSFUL;
+        }
+        else{
+            buildState = StashCommitBuildState.FAILED;
+        }
+        StashCommitBuildStatus buildStatus = new StashCommitBuildStatus(buildState, jobName, buildId, buildUrl, null);
+        this.client.postCommitBuildStatus(sourceCommit, buildStatus);
     }
 
     private Boolean isPullRequestMergable(StashPullRequestResponseValue pullRequest) {
