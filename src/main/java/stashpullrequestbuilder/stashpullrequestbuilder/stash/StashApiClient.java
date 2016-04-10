@@ -107,6 +107,7 @@ public class StashApiClient {
 
     public void deletePullRequestComment(String pullRequestId, String commentId) {
         String path = pullRequestPath(pullRequestId) + "/comments/" + commentId + "?version=0";
+        logger.log(Level.FINEST, "Deleting comment at " + path);
         deleteRequest(path);
     }
 
@@ -114,6 +115,7 @@ public class StashApiClient {
     public StashPullRequestComment postPullRequestComment(String pullRequestId, String comment) {
         String path = pullRequestPath(pullRequestId) + "/comments";
         try {
+            logger.log(Level.FINEST, "Posting \"" + comment + "\" to " + path);
             String response = postRequest(path, comment);
             return parseSingleCommentJson(response);
 

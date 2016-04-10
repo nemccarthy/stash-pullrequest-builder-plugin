@@ -56,7 +56,9 @@ public class StashBuilds {
         else {
             buildUrl = rootUrl + build.getUrl();
         }
-        repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
+        if (trigger.getDeleteBuildStartedToStash()) {
+            repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
+        }
 
         StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
         String additionalComment = "";
@@ -68,8 +70,10 @@ public class StashBuilds {
             }
         }
         String duration = build.getDurationString();
-        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
-                cause.getDestinationCommitHash(), result, buildUrl,
-                build.getNumber(), additionalComment, duration);
+        if (trigger.getReportBuildStatusToStash()) {
+            repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
+                    cause.getDestinationCommitHash(), result, buildUrl,
+                    build.getNumber(), additionalComment, duration);
+        }
     }
 }

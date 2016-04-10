@@ -1,5 +1,7 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestBuildHistory;
+
 import antlr.ANTLRException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -45,8 +47,12 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean checkMergeable;
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
+    private final boolean reportBuildStartedToStash;
+    private final boolean deleteBuildStartedToStash;
+    private final boolean reportBuildStatusToStash;
     private final boolean deletePreviousBuildFinishComments;
 
+    public static final StashPullRequestBuildHistory buildHistory = new StashPullRequestBuildHistory();
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
     @Extension
@@ -66,6 +72,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             boolean checkMergeable,
             boolean checkNotConflicted,
             boolean onlyBuildOnComment,
+            boolean reportBuildStartedToStash,
+            boolean deleteBuildStartedToStash,
+            boolean reportBuildStatusToStash,
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
             String targetBranchesToBuild
@@ -84,6 +93,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.checkMergeable = checkMergeable;
         this.checkNotConflicted = checkNotConflicted;
         this.onlyBuildOnComment = onlyBuildOnComment;
+        this.reportBuildStartedToStash = reportBuildStartedToStash;
+        this.deleteBuildStartedToStash = deleteBuildStartedToStash;
+        this.reportBuildStatusToStash = reportBuildStatusToStash;
         this.deletePreviousBuildFinishComments = deletePreviousBuildFinishComments;
         this.targetBranchesToBuild = targetBranchesToBuild;
     }
@@ -144,6 +156,18 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return ignoreSsl;
     }
 
+    public boolean getReportBuildStartedToStash() {
+        return reportBuildStartedToStash;
+    }
+
+    public boolean getDeleteBuildStartedToStash() {
+        return deleteBuildStartedToStash;
+    }
+
+    public boolean getReportBuildStatusToStash() {
+        return reportBuildStatusToStash;
+    }
+
     public boolean getDeletePreviousBuildFinishComments() {
         return deletePreviousBuildFinishComments;
     }
@@ -158,7 +182,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             this.stashPullRequestsBuilder = StashPullRequestsBuilder.getBuilder();
             this.stashPullRequestsBuilder.setProject(project);
             this.stashPullRequestsBuilder.setTrigger(this);
-            this.stashPullRequestsBuilder.setupBuilder();
+            this.stashPullRequestsBuilder.setupBuilder(this.buildHistory);
         } catch(IllegalStateException e) {
             logger.log(Level.SEVERE, "Can't start trigger", e);
             return;
