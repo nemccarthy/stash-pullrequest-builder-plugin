@@ -42,6 +42,7 @@ public class StashApiClient {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private String apiBaseUrl;
+    private String buildStatusApiBaseUrl;
 
     private String project;
     private String repositoryName;
@@ -53,6 +54,8 @@ public class StashApiClient {
         this.project = project;
         this.repositoryName = repositoryName;
         this.apiBaseUrl = stashHost.replaceAll("/$", "") + "/rest/api/1.0/projects/";
+        this.buildStatusApiBaseUrl = stashHost.replaceAll("/$", "") + "/rest/build-status/1.0/";
+
         if (ignoreSsl) {
             Protocol easyhttps = new Protocol("https", (ProtocolSocketFactory) new EasySSLProtocolSocketFactory(), 443);
             Protocol.registerProtocol("https", easyhttps);
@@ -114,7 +117,7 @@ public class StashApiClient {
     public StashPullRequestComment postPullRequestComment(String pullRequestId, String comment) {
         String path = pullRequestPath(pullRequestId) + "/comments";
         try {
-            String response = postRequest(path, comment);
+            String response = postComment(path, comment);
             return parseSingleCommentJson(response);
 
         } catch (UnsupportedEncodingException e) {
@@ -125,6 +128,21 @@ public class StashApiClient {
         }
         return null;
     }
+
+    public void postCommitBuildStatus(String commitId, StashCommitBuildStatus buildStatus){
+        String path = commitPath(commitId);
+        try {
+            postRequest(path, mapper.writeValueAsString(buildStatus));
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to post Stash build status " + path + " " + e);
+        }
+    }
+
+
+
 
     public StashPullRequestMergableResponse getPullRequestMergeStatus(String pullRequestId) {
         String path = pullRequestPath(pullRequestId) + "/merge";
@@ -202,19 +220,30 @@ public class StashApiClient {
         logger.log(Level.FINE, "Delete comment {" + path + "} returned result code; " + res);
     }
 
-    private String postRequest(String path, String comment) throws UnsupportedEncodingException {
-        logger.log(Level.FINEST, "PR-POST-REQUEST:" + path + " with: " + comment);
-        HttpClient client = getHttpClient();
-        client.getState().setCredentials(AuthScope.ANY, credentials);
-        PostMethod httppost = new PostMethod(path);
+    private String postComment(String path, String comment) throws UnsupportedEncodingException {
 
         ObjectNode node = mapper.getNodeFactory().objectNode();
         node.put("text", comment);
 
+        String requestBody = null;
+        try {
+            requestBody = mapper.writeValueAsString(node);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return postRequest(path, requestBody);
+    }
+
+    private String postRequest(String path, String requestBody){
+        logger.log(Level.FINEST, "PR-POST-REQUEST:" + path + " with: " + requestBody);
+        HttpClient client = getHttpClient();
+        client.getState().setCredentials(AuthScope.ANY, credentials);
+        PostMethod httppost = new PostMethod(path);
+
         StringRequestEntity requestEntity = null;
         try {
-            requestEntity = new StringRequestEntity(
-                    mapper.writeValueAsString(node),
+            requestEntity =  new StringRequestEntity(
+                    requestBody,
                     "application/json",
                     "UTF-8");
         } catch (IOException e) {
@@ -228,9 +257,11 @@ public class StashApiClient {
         try {
             responseCode = client.executeMethod(httppost);
             InputStream responseBodyAsStream = httppost.getResponseBodyAsStream();
-            StringWriter stringWriter = new StringWriter();
-            IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
-            response = stringWriter.toString();
+            if (responseBodyAsStream != null) {
+                StringWriter stringWriter = new StringWriter();
+                IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
+                response = stringWriter.toString();
+            }
             logger.log(Level.FINEST, "API Request Response: " + response);
         }  catch (Exception e) {
             e.printStackTrace();
@@ -291,6 +322,14 @@ public class StashApiClient {
         return parsedResponse;
     }
 
+    private StashCommitBuildStatus parseCommitBuildStatusJson(String response) throws IOException {
+        StashCommitBuildStatus parsedResponse;
+        parsedResponse = mapper.readValue(
+                response,
+                StashCommitBuildStatus.class);
+        return parsedResponse;
+    }
+
     private String pullRequestsPath() {
         return apiBaseUrl + this.project + "/repos/" + this.repositoryName + "/pull-requests/";
     }
@@ -302,6 +341,10 @@ public class StashApiClient {
     private String pullRequestsPath(int start) {
         String basePath = pullRequestsPath();
         return basePath.substring(0, basePath.length() - 1) + "?start=" + start;
+    }
+
+    private String commitPath(String commitId) {
+        return buildStatusApiBaseUrl +"commits/" + commitId;
     }
 
     private static class EasySSLProtocolSocketFactory extends org.apache.commons.httpclient.contrib.ssl.EasySSLProtocolSocketFactory {

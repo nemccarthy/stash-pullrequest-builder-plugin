@@ -71,5 +71,6 @@ public class StashBuilds {
         repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
                 cause.getDestinationCommitHash(), result, buildUrl,
                 build.getNumber(), additionalComment, duration);
+        repository.postFinishedBuildStatus(build.getProject().getName(), build.toString(), cause.getSourceCommitHash(), result, buildUrl);
     }
 }
