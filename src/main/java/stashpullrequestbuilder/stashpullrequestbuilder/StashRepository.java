@@ -310,7 +310,10 @@ public class StashRepository {
                         }
                     }
 
-                    if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
+                    if(isSkipBuild(content)) {
+                        shouldBuild = false;
+                        break;
+                    } if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
                         shouldBuild = true;
                         break;
                     }
@@ -334,12 +337,12 @@ public class StashRepository {
         return true;
     }
 
-    private boolean isSkipBuild(String pullRequestTitle) {
+    private boolean isSkipBuild(String pullRequestContentString) {
         String skipPhrases = this.trigger.getCiSkipPhrases();
         if (skipPhrases != null && !"".equals(skipPhrases)) {
             String[] phrases = skipPhrases.split(",");
             for(String phrase : phrases) {
-                if (isPhrasesContain(pullRequestTitle, phrase)) {
+                if (isPhrasesContain(pullRequestContentString, phrase)) {
                     return true;
                 }
             }
