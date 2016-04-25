@@ -96,7 +96,7 @@ public class StashRepository {
         }
         return null;
     }
-    
+
     public static Map<String, String> getParametersFromContent(String content){
         Map<String, String> result = new TreeMap<String, String>();
 		String lines[] = content.split("\\r?\\n|\\r");
@@ -106,10 +106,10 @@ public class StashRepository {
 				result.put(parameter.getKey(), parameter.getValue());
 			}
 		}
-        
+
         return result;
    }
-    
+
     public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest){
         StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
         String owner = destination.getRepository().getProjectName();
@@ -122,7 +122,7 @@ public class StashRepository {
 //          Collections.reverse(comments);
 
             Map<String, String> result = new TreeMap<String, String>();
-            
+
             for (StashPullRequestComment comment : comments) {
                 String content = comment.getText();
                 if (content == null || content.isEmpty()) {
@@ -138,7 +138,7 @@ public class StashRepository {
         }
         return null;
     }
-    
+
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
@@ -159,6 +159,7 @@ public class StashRepository {
                     pullRequest.getFromRef().getLatestCommit(),
                     pullRequest.getToRef().getLatestCommit(),
                     commentId,
+                    pullRequest.getVersion(),
                     additionalParameters);
             this.builder.getTrigger().startJob(cause);
 
@@ -185,7 +186,7 @@ public class StashRepository {
         }
         return message;
     }
-    
+
     public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, Result buildResult, String buildUrl, int buildNumber, String additionalComment, String duration) {
         String message = getMessageForBuildResult(buildResult);
         String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
@@ -193,6 +194,11 @@ public class StashRepository {
         comment = comment.concat(additionalComment);
 
         this.client.postPullRequestComment(pullRequestId, comment);
+    }
+
+    public boolean mergePullRequest(String pullRequestId, String version)
+    {
+        return this.client.mergePullRequest(pullRequestId, version);
     }
 
     private Boolean isPullRequestMergable(StashPullRequestResponseValue pullRequest) {

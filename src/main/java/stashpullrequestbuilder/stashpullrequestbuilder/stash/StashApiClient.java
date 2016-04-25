@@ -141,6 +141,20 @@ public class StashApiClient {
         return null;
     }
 
+    public boolean mergePullRequest(String pullRequestId, String version) {
+        String path = pullRequestPath(pullRequestId) + "/merge?version=" + version;
+        try {
+            String response = postRequest(path, null);
+            return !response.equals(Integer.toString(HttpStatus.SC_CONFLICT));
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to merge Stash PR " + path + " " + e);
+        }
+        return false;
+    }
+
     private HttpClient getHttpClient() {
         HttpClient client = new HttpClient();
 //        if (Jenkins.getInstance() != null) {
@@ -208,20 +222,22 @@ public class StashApiClient {
         client.getState().setCredentials(AuthScope.ANY, credentials);
         PostMethod httppost = new PostMethod(path);
 
-        ObjectNode node = mapper.getNodeFactory().objectNode();
-        node.put("text", comment);
+        if(comment != null) {
+            ObjectNode node = mapper.getNodeFactory().objectNode();
+            node.put("text", comment);
 
-        StringRequestEntity requestEntity = null;
-        try {
-            requestEntity = new StringRequestEntity(
-                    mapper.writeValueAsString(node),
-                    "application/json",
-                    "UTF-8");
-        } catch (IOException e) {
-            e.printStackTrace();
+            StringRequestEntity requestEntity = null;
+            try {
+                requestEntity = new StringRequestEntity(
+                        mapper.writeValueAsString(node),
+                        "application/json",
+                        "UTF-8");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            httppost.setRequestEntity(requestEntity);
         }
 
-        httppost.setRequestEntity(requestEntity);
         client.getParams().setAuthenticationPreemptive(true);
         String response = "";
         int responseCode;
@@ -237,8 +253,10 @@ public class StashApiClient {
             throw new RuntimeException("Failed to process PR get request; " + path, e);
         }
         logger.log(Level.FINEST, "PR-POST-RESPONSE:" + response);
-        if (!validResponseCode(responseCode)) {
-            logger.log(Level.SEVERE, "Failing to get response from Stash PR POST" + path);
+        if (responseCode == HttpStatus.SC_CONFLICT) {
+            return Integer.toString(responseCode);
+        } else if (!validResponseCode(responseCode)) {
+            logger.log(Level.SEVERE, "Failing to get response from Stash PR POST " + path);
             throw new RuntimeException("Didn't get a 200 response from Stash PR POST! Response; '" +
                     HttpStatus.getStatusText(responseCode) + "' with message; " + response);
         }
@@ -250,7 +268,7 @@ public class StashApiClient {
                 responseCode == HttpStatus.SC_ACCEPTED ||
                 responseCode == HttpStatus.SC_CREATED ||
                 responseCode == HttpStatus.SC_NO_CONTENT ||
-                responseCode == HttpStatus.SC_RESET_CONTENT ;
+                responseCode == HttpStatus.SC_RESET_CONTENT;
     }
 
     private StashPullRequestResponse parsePullRequestJson(String response) throws IOException {

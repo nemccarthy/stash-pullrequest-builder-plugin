@@ -19,6 +19,7 @@ public class StashCause extends Cause {
     private final String sourceCommitHash;
     private final String destinationCommitHash;
     private final String buildStartCommentId;
+    private final String pullRequestVersion;
     private final String stashHost;
     private final Map<String,String> additionalParameters;
 
@@ -34,6 +35,7 @@ public class StashCause extends Cause {
                           String sourceCommitHash,
                           String destinationCommitHash,
                           String buildStartCommentId,
+                          String pullRequestVersion,
                           Map<String,String> additionalParameters) {
         this.sourceBranch = sourceBranch;
         this.targetBranch = targetBranch;
@@ -46,6 +48,7 @@ public class StashCause extends Cause {
         this.sourceCommitHash = sourceCommitHash;
         this.destinationCommitHash = destinationCommitHash;
         this.buildStartCommentId = buildStartCommentId;
+        this.pullRequestVersion = pullRequestVersion;
         this.stashHost = stashHost.replaceAll("/$", "");
         this.additionalParameters = additionalParameters;
     }
@@ -69,6 +72,9 @@ public class StashCause extends Cause {
         return pullRequestId;
     }
 
+    public String getPullRequestVersion() {
+        return pullRequestVersion;
+    }
 
     public String getDestinationRepositoryOwner() {
         return destinationRepositoryOwner;
@@ -89,7 +95,7 @@ public class StashCause extends Cause {
     public String getBuildStartCommentId() { return buildStartCommentId; }
 
     public Map<String,String> getAdditionalParameters() { return additionalParameters; }
-    
+
     @Override
     public String getShortDescription() {
         return "<a href=\"" + stashHost + "/projects/" + this.getDestinationRepositoryOwner() + "/repos/" +
