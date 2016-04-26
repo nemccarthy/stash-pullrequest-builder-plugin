@@ -195,6 +195,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         	}
         }
 
+        // Make sure to add the default parameter values back in!
+        values.putAll(this.getDefaultParameters());
+
         return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList(values.values())));
     }
 
