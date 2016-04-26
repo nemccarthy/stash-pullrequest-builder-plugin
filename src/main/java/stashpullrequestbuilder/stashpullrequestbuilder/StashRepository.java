@@ -1,5 +1,7 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import static java.lang.String.format;
+
 import hudson.model.Result;
 
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
@@ -65,7 +67,7 @@ public class StashRepository {
     }
 
     public Collection<StashPullRequestResponseValue> getTargetPullRequests() {
-        logger.info("Fetch PullRequests.");
+        logger.info(format("Fetch PullRequests (%s).", builder.getProject().getName()));
         List<StashPullRequestResponseValue> pullRequests = client.getPullRequests();
         List<StashPullRequestResponseValue> targetPullRequests = new ArrayList<StashPullRequestResponseValue>();
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
@@ -79,7 +81,7 @@ public class StashRepository {
     public String postBuildStartCommentTo(StashPullRequestResponseValue pullRequest) {
             String sourceCommit = pullRequest.getFromRef().getLatestCommit();
             String destinationCommit = pullRequest.getToRef().getLatestCommit();
-            String comment = String.format(BUILD_START_MARKER, builder.getProject().getDisplayName(), sourceCommit, destinationCommit);
+            String comment = format(BUILD_START_MARKER, builder.getProject().getDisplayName(), sourceCommit, destinationCommit);
             StashPullRequestComment commentResponse = this.client.postPullRequestComment(pullRequest.getId(), comment);
             return commentResponse.getCommentId().toString();
     }
@@ -188,7 +190,7 @@ public class StashRepository {
     
     public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, Result buildResult, String buildUrl, int buildNumber, String additionalComment, String duration) {
         String message = getMessageForBuildResult(buildResult);
-        String comment = String.format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
+        String comment = format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
 
         comment = comment.concat(additionalComment);
 
@@ -224,7 +226,7 @@ public class StashRepository {
                         continue;
                     }
 
-                    String project_build_finished = String.format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
+                    String project_build_finished = format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
                     Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
 
                     if (finishMatcher.find()) {
@@ -278,8 +280,8 @@ public class StashRepository {
                     }
 
                     //These will match any start or finish message -- need to check commits
-                    String project_build_start = String.format(BUILD_START_REGEX, builder.getProject().getDisplayName());
-                    String project_build_finished = String.format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
+                    String project_build_start = format(BUILD_START_REGEX, builder.getProject().getDisplayName());
+                    String project_build_finished = format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
                     Matcher startMatcher = Pattern.compile(project_build_start, Pattern.CASE_INSENSITIVE).matcher(content);
                     Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
 
