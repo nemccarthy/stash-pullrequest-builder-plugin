@@ -319,6 +319,9 @@ public class StashRepository {
                 }
             }
         }
+        if (shouldBuild) {
+            logger.info("Building PR: " + pullRequest.getId());
+        }
         return shouldBuild;
     }
 

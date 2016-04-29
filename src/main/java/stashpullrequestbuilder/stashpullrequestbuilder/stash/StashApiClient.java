@@ -357,7 +357,7 @@ public class StashApiClient {
                     StringWriter stringWriter = new StringWriter();
                     IOUtils.copy(responseBodyAsStream, stringWriter, "UTF-8");
                     response = stringWriter.toString();
-                    logger.info("API Request Response: " + response);
+                    logger.log(Level.FINEST, "API Request Response: " + response);
                     
                     return response;
 
