@@ -11,12 +11,15 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
 import hudson.model.*;
+import hudson.model.Queue;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -24,7 +27,10 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,6 +54,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
     private final boolean deletePreviousBuildFinishComments;
+    private final boolean cancelOutdatedJobsEnabled;
 
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
@@ -70,8 +77,8 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             boolean onlyBuildOnComment,
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
-            String targetBranchesToBuild
-            ) throws ANTLRException {
+            String targetBranchesToBuild,
+            boolean cancelOutdatedJobsEnabled) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
         this.cron = cron;
@@ -80,6 +87,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.projectCode = projectCode;
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
+        this.cancelOutdatedJobsEnabled = cancelOutdatedJobsEnabled;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
         this.ignoreSsl = ignoreSsl;
         this.checkDestinationCommit = checkDestinationCommit;
@@ -154,6 +162,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return targetBranchesToBuild;
     }
 
+    public boolean isCancelOutdatedJobsEnabled() {
+        return cancelOutdatedJobsEnabled;
+    }
+
     @Override
     public void start(AbstractProject<?, ?> project, boolean newInstance) {
         try {
@@ -200,7 +212,51 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         // Make sure to add the default parameter values back in!
         values.putAll(this.getDefaultParameters());
 
+        if (isCancelOutdatedJobsEnabled()) {
+            cancelPreviousJobsInQueueThatMatch(cause);
+            abortRunningJobsThatMatch(cause);
+        }
+
         return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList(values.values())));
+    }
+
+    private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {
+        logger.fine("Looking for queued jobs that match PR ID: " + stashCause.getPullRequestId());
+        Queue queue = Jenkins.getInstance().getQueue();
+        for (Queue.Item item : queue.getItems()) {
+            if (hasCauseFromTheSamePullRequest(item.getCauses(), stashCause)) {
+                logger.info("Canceling item in queue: " + item);
+                queue.cancel(item);
+            }
+        }
+    }
+
+    private void abortRunningJobsThatMatch(@Nonnull StashCause stashCause) {
+        logger.fine("Looking for running jobs that match PR ID: " + stashCause.getPullRequestId());
+        for (Object o : job.getBuilds()) {
+            if (o instanceof Build) {
+                Build build = (Build) o;
+                if (build.isBuilding() && hasCauseFromTheSamePullRequest(build.getCauses(), stashCause)) {
+                    logger.info("Aborting build: " + build + " since PR is outdated");
+                    build.getExecutor().interrupt(Result.ABORTED);
+                }
+            }
+        }
+    }
+
+    private boolean hasCauseFromTheSamePullRequest(@Nullable List<Cause> causes, @Nullable StashCause pullRequestCause) {
+        if (causes != null && pullRequestCause != null) {
+            for (Cause cause : causes) {
+                if (cause instanceof StashCause) {
+                    StashCause sc = (StashCause) cause;
+                    if (StringUtils.equals(sc.getPullRequestId(), pullRequestCause.getPullRequestId()) &&
+                            StringUtils.equals(sc.getSourceRepositoryName(), pullRequestCause.getSourceRepositoryName())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private Map<String, ParameterValue> getDefaultParameters() {
