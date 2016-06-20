@@ -256,7 +256,9 @@ public class StashRepository {
                 return false;
             }
 
-            if (trigger.isOnlyBuildOnComment()) {
+            boolean isOnlyBuildOnComment = trigger.isOnlyBuildOnComment();
+
+            if (isOnlyBuildOnComment) {
                 shouldBuild = false;
             }
 
@@ -287,6 +289,11 @@ public class StashRepository {
 
                     if (startMatcher.find() ||
                         finishMatcher.find()) {
+                        //in build only on comment, we should stop parsing comments as soon as a PR builder comment is found.
+                        if(isOnlyBuildOnComment) {
+                            assert !shouldBuild;
+                            break;
+                        }
 
                         String sourceCommitMatch;
                         String destinationCommitMatch;
