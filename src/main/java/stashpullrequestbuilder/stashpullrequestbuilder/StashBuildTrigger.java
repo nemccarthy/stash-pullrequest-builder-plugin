@@ -24,6 +24,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -71,7 +72,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
             String targetBranchesToBuild
-            ) throws ANTLRException {
+    ) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
         this.cron = cron;
@@ -104,14 +105,14 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     // Needed for Jelly Config
     public String getcredentialsId() {
-    	return this.credentialsId;
+        return this.credentialsId;
     }
 
     private StandardUsernamePasswordCredentials getCredentials() {
         return CredentialsMatchers.firstOrNull(
-                          CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, this.job, ACL.SYSTEM,
-                                                                URIRequirementBuilder.fromUri(stashHost).build()),
-                          CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
+                CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, this.job, ACL.SYSTEM,
+                        URIRequirementBuilder.fromUri(stashHost).build()),
+                CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
     }
 
     public String getUsername() {
@@ -139,7 +140,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public boolean getCheckDestinationCommit() {
-    	return checkDestinationCommit;
+        return checkDestinationCommit;
     }
 
     public boolean isIgnoreSsl() {
@@ -161,7 +162,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             this.stashPullRequestsBuilder.setProject(project);
             this.stashPullRequestsBuilder.setTrigger(this);
             this.stashPullRequestsBuilder.setupBuilder();
-        } catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             logger.log(Level.SEVERE, "Can't start trigger", e);
             return;
         }
@@ -170,7 +171,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public static StashBuildTrigger getTrigger(AbstractProject project) {
         Trigger trigger = project.getTrigger(StashBuildTrigger.class);
-        return (StashBuildTrigger)trigger;
+        return (StashBuildTrigger) trigger;
     }
 
     public StashPullRequestsBuilder getBuilder() {
@@ -178,38 +179,33 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public QueueTaskFuture<?> startJob(StashCause cause) {
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
-        values.put("sourceBranch", new StringParameterValue("sourceBranch", cause.getSourceBranch()));
-        values.put("targetBranch", new StringParameterValue("targetBranch", cause.getTargetBranch()));
-        values.put("sourceRepositoryOwner", new StringParameterValue("sourceRepositoryOwner", cause.getSourceRepositoryOwner()));
-        values.put("sourceRepositoryName", new StringParameterValue("sourceRepositoryName", cause.getSourceRepositoryName()));
-        values.put("pullRequestId", new StringParameterValue("pullRequestId", cause.getPullRequestId()));
-        values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
-        values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
-        values.put("pullRequestTitle", new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
-        values.put("sourceCommitHash", new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
-        values.put("destinationCommitHash", new StringParameterValue("destinationCommitHash", cause.getDestinationCommitHash()));
+        List<ParameterValue> values = getDefaultParameters();
+        values.add(new StringParameterValue("sourceBranch", cause.getSourceBranch()));
+        values.add(new StringParameterValue("targetBranch", cause.getTargetBranch()));
+        values.add(new StringParameterValue("sourceRepositoryOwner", cause.getSourceRepositoryOwner()));
+        values.add(new StringParameterValue("sourceRepositoryName", cause.getSourceRepositoryName()));
+        values.add(new StringParameterValue("pullRequestId", cause.getPullRequestId()));
+        values.add(new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
+        values.add(new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
+        values.add(new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
+        values.add(new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
+        values.add(new StringParameterValue("destinationCommitHash", cause.getDestinationCommitHash()));
 
         Map<String, String> additionalParameters = cause.getAdditionalParameters();
-        if(additionalParameters != null){
-        	for(String parameter : additionalParameters.keySet()){
-        		values.put(parameter, new StringParameterValue(parameter, additionalParameters.get(parameter)));
-        	}
+        if (additionalParameters != null) {
+            for (String parameter : additionalParameters.keySet()) {
+                values.add(new StringParameterValue(parameter, additionalParameters.get(parameter)));
+            }
         }
-
-        // Make sure to add the default parameter values back in!
-        values.putAll(this.getDefaultParameters());
-
-        return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList(values.values())));
+        return this.job.scheduleBuild2(0, cause, new ParametersAction(values));
     }
 
-    private Map<String, ParameterValue> getDefaultParameters() {
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
+    private List<ParameterValue> getDefaultParameters() {
+        List<ParameterValue> values = new ArrayList<ParameterValue>();
         ParametersDefinitionProperty definitionProperty = this.job.getProperty(ParametersDefinitionProperty.class);
-
         if (definitionProperty != null) {
             for (ParameterDefinition definition : definitionProperty.getParameterDefinitions()) {
-                values.put(definition.getName(), definition.getDefaultParameterValue());
+                values.add(definition.getDefaultParameterValue());
             }
         }
         return values;
@@ -217,9 +213,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     @Override
     public void run() {
-        if(this.getBuilder().getProject().isDisabled()) {
+        if (this.getBuilder().getProject().isDisabled()) {
             logger.info(format("Build Skip (%s).", getBuilder().getProject().getName()));
         } else {
+            logger.info(format("Build started (%s).", getBuilder().getProject().getName()));
             this.stashPullRequestsBuilder.run();
         }
         this.getDescriptor().save();
@@ -268,7 +265,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
                 return new ListBoxModel();
             }
             return new StandardUsernameListBoxModel().withEmptySelection().withAll(
-               CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build()));
+                    CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build()));
         }
     }
 }
