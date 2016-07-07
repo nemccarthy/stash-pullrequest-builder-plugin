@@ -72,7 +72,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
             String targetBranchesToBuild
-    ) throws ANTLRException {
+            ) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
         this.cron = cron;
@@ -105,14 +105,14 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     // Needed for Jelly Config
     public String getcredentialsId() {
-        return this.credentialsId;
+    	return this.credentialsId;
     }
 
     private StandardUsernamePasswordCredentials getCredentials() {
         return CredentialsMatchers.firstOrNull(
-                CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, this.job, ACL.SYSTEM,
-                        URIRequirementBuilder.fromUri(stashHost).build()),
-                CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
+                          CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, this.job, ACL.SYSTEM,
+                                                                URIRequirementBuilder.fromUri(stashHost).build()),
+                          CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
     }
 
     public String getUsername() {
@@ -140,7 +140,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public boolean getCheckDestinationCommit() {
-        return checkDestinationCommit;
+    	return checkDestinationCommit;
     }
 
     public boolean isIgnoreSsl() {
@@ -162,7 +162,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             this.stashPullRequestsBuilder.setProject(project);
             this.stashPullRequestsBuilder.setTrigger(this);
             this.stashPullRequestsBuilder.setupBuilder();
-        } catch (IllegalStateException e) {
+        } catch(IllegalStateException e) {
             logger.log(Level.SEVERE, "Can't start trigger", e);
             return;
         }
@@ -171,7 +171,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public static StashBuildTrigger getTrigger(AbstractProject project) {
         Trigger trigger = project.getTrigger(StashBuildTrigger.class);
-        return (StashBuildTrigger) trigger;
+        return (StashBuildTrigger)trigger;
     }
 
     public StashPullRequestsBuilder getBuilder() {
@@ -192,10 +192,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         values.add(new StringParameterValue("destinationCommitHash", cause.getDestinationCommitHash()));
 
         Map<String, String> additionalParameters = cause.getAdditionalParameters();
-        if (additionalParameters != null) {
-            for (String parameter : additionalParameters.keySet()) {
-                values.add(new StringParameterValue(parameter, additionalParameters.get(parameter)));
-            }
+        if(additionalParameters != null){
+        	for(String parameter : additionalParameters.keySet()){
+        		values.add(new StringParameterValue(parameter, additionalParameters.get(parameter)));
+        	}
         }
         return this.job.scheduleBuild2(0, cause, new ParametersAction(values));
     }
@@ -213,7 +213,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     @Override
     public void run() {
-        if (this.getBuilder().getProject().isDisabled()) {
+        if(this.getBuilder().getProject().isDisabled()) {
             logger.info(format("Build Skip (%s).", getBuilder().getProject().getName()));
         } else {
             logger.info(format("Build started (%s).", getBuilder().getProject().getName()));
@@ -265,7 +265,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
                 return new ListBoxModel();
             }
             return new StandardUsernameListBoxModel().withEmptySelection().withAll(
-                    CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build()));
+               CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build()));
         }
     }
 }
