@@ -280,8 +280,8 @@ public class StashRepository {
                     }
 
                     //These will match any start or finish message -- need to check commits
-                    String project_build_start = format(BUILD_START_REGEX, builder.getProject().getDisplayName());
-                    String project_build_finished = format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
+                    String project_build_start = String.format(BUILD_START_REGEX, Pattern.quote(builder.getProject().getDisplayName()));
+                    String project_build_finished = String.format(BUILD_FINISH_REGEX, Pattern.quote(builder.getProject().getDisplayName()));
                     Matcher startMatcher = Pattern.compile(project_build_start, Pattern.CASE_INSENSITIVE).matcher(content);
                     Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
 
