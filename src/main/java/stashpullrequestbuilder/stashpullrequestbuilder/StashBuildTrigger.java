@@ -1,32 +1,38 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
-import static java.lang.String.format;
-
 import antlr.ANTLRException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Item;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Queue;
+import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import hudson.util.ListBoxModel;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import static java.lang.String.format;
 
 /**
  * Created by Nathan McCarthy
@@ -109,8 +115,12 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     private StandardUsernamePasswordCredentials getCredentials() {
         return CredentialsMatchers.firstOrNull(
-                          CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, this.job, ACL.SYSTEM,
-                                                                URIRequirementBuilder.fromUri(stashHost).build()),
+                          CredentialsProvider.lookupCredentials(
+                                  StandardUsernamePasswordCredentials.class,
+                                  this.job,
+                                  Tasks.getDefaultAuthenticationOf(this.job),
+                                  URIRequirementBuilder.fromUri(stashHost).build()
+                          ),
                           CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
     }
 
@@ -267,8 +277,13 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             if (context == null || !context.hasPermission(Item.CONFIGURE)) {
                 return new ListBoxModel();
             }
-            return new StandardUsernameListBoxModel().withEmptySelection().withAll(
-               CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build()));
+            return new StandardUsernameListBoxModel()
+                    .includeEmptyValue()
+                    .includeAs(context instanceof Queue.Task
+                                    ? Tasks.getDefaultAuthenticationOf((Queue.Task) context)
+                                    : ACL.SYSTEM, context, StandardUsernamePasswordCredentials.class,
+                            URIRequirementBuilder.fromUri(source).build()
+                    );
         }
     }
 }
