@@ -31,6 +31,6 @@ public class StashBuildListener extends RunListener<AbstractBuild> {
         if (trigger == null) {
             return;
         }
-        trigger.getBuilder().getBuilds().onCompleted(abstractBuild);
+        trigger.getBuilder().getBuilds().onCompleted(abstractBuild, listener);
     }
 }
