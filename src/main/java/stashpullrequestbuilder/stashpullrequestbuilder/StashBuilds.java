@@ -3,6 +3,7 @@ package stashpullrequestbuilder.stashpullrequestbuilder;
 import hudson.model.AbstractBuild;
 import hudson.model.Cause;
 import hudson.model.Result;
+import hudson.model.TaskListener;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 
@@ -43,7 +44,7 @@ public class StashBuilds {
         }
     }
 
-    public void onCompleted(AbstractBuild build) {
+    public void onCompleted(AbstractBuild build, TaskListener listener) {
         StashCause cause = this.getCause(build);
         if (cause == null) {
             return;
@@ -60,8 +61,30 @@ public class StashBuilds {
         }
         repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
 
-        StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
         String additionalComment = "";
+        StashBuildTrigger trig = StashBuildTrigger.getTrigger(build.getProject());
+        if(trig.getMergeOnSuccess() == true && build.getResult() == Result.SUCCESS)
+        {
+            boolean mergeStat = repository.mergePullRequest(cause.getPullRequestId(), cause.getPullRequestVersion());
+            if(mergeStat == true)
+            {
+                String logmsg = "Merged pull request " + cause.getPullRequestId() + "(" +
+                cause.getSourceBranch() + ") to branch " + cause.getTargetBranch();
+                logger.log(Level.INFO, logmsg);
+                listener.getLogger().println(logmsg);
+            }
+            else
+            {
+                String logmsg = "Failed to merge pull request " + cause.getPullRequestId() + "(" +
+                cause.getSourceBranch() + ") to branch " + cause.getTargetBranch() +
+                " because it's out of date";
+                logger.log(Level.INFO, logmsg);
+                listener.getLogger().println(logmsg);
+                additionalComment = additionalComment + "\n\n" + logmsg;
+            }
+        }
+
+        StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
         if(comments != null) {
             String buildComment = result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment();
 

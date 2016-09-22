@@ -30,6 +30,9 @@
     <f:entry title="Build only if PR is mergeable" field="checkMergeable">
       <f:checkbox default="false"/>
     </f:entry>
+    <f:entry title="Merge PR if build is successful" field="mergeOnSuccess">
+        <f:checkbox default="false"/>
+    </f:entry>
     <f:entry title="Keep PR comment only for most recent Build" field="deletePreviousBuildFinishComments">
       <f:checkbox default="false"/>
     </f:entry>

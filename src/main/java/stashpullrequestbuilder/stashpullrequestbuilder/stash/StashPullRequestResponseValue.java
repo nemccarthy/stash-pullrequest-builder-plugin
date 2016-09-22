@@ -25,8 +25,22 @@ public class StashPullRequestResponseValue {
 
     private String id; //
 
+    private String version;
+
     public String getDescription() {
         return description;
+    }
+
+    @JsonProperty("version")
+    public String getVersion()
+    {
+        return version;
+    }
+
+    @JsonProperty("version")
+    public void setVersion(String ver)
+    {
+        this.version = ver;
     }
 
     public void setDescription(String description) {

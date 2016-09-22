@@ -76,6 +76,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean ignoreSsl;
     private final boolean checkDestinationCommit;
     private final boolean checkMergeable;
+    private final boolean mergeOnSuccess;
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
     private final boolean deletePreviousBuildFinishComments;
@@ -98,6 +99,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             boolean ignoreSsl,
             boolean checkDestinationCommit,
             boolean checkMergeable,
+            boolean mergeOnSuccess,
             boolean checkNotConflicted,
             boolean onlyBuildOnComment,
             String ciBuildPhrases,
@@ -118,6 +120,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.ignoreSsl = ignoreSsl;
         this.checkDestinationCommit = checkDestinationCommit;
         this.checkMergeable = checkMergeable;
+        this.mergeOnSuccess = mergeOnSuccess;
         this.checkNotConflicted = checkNotConflicted;
         this.onlyBuildOnComment = onlyBuildOnComment;
         this.deletePreviousBuildFinishComments = deletePreviousBuildFinishComments;
@@ -190,6 +193,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public String getTargetBranchesToBuild() {
         return targetBranchesToBuild;
+    }
+
+    public boolean getMergeOnSuccess() {
+        return mergeOnSuccess;
     }
 
     public boolean isCancelOutdatedJobsEnabled() {
