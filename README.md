@@ -55,6 +55,7 @@ Select *Stash Pull Request Builder* then configure:
 - Rebuild if destination branch changes:
 - Build only if Stash reports no conflicts:
 - Build only if PR is mergeable:
+- Cancel outdated jobs
 - CI Skip Phrases: default: "NO TEST"
 - Only build when asked (with test phrase):
 - CI Build Phrases: default: "test this please"

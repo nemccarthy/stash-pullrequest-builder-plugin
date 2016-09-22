@@ -1,33 +1,63 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
-import static java.lang.String.format;
-
 import antlr.ANTLRException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Item;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Queue;
+import hudson.model.StringParameterValue;
+import hudson.model.AbstractProject;
+import hudson.model.Build;
+import hudson.model.Cause;
+import hudson.model.Item;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Queue;
+import hudson.model.Result;
+import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import static java.lang.String.format;
+
+import static java.lang.String.format;
 
 /**
  * Created by Nathan McCarthy
@@ -49,6 +79,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
     private final boolean deletePreviousBuildFinishComments;
+    private final boolean cancelOutdatedJobsEnabled;
 
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
@@ -71,8 +102,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             boolean onlyBuildOnComment,
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
-            String targetBranchesToBuild
-            ) throws ANTLRException {
+            String targetBranchesToBuild,
+            boolean cancelOutdatedJobsEnabled
+    ) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
         this.cron = cron;
@@ -81,6 +113,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.projectCode = projectCode;
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
+        this.cancelOutdatedJobsEnabled = cancelOutdatedJobsEnabled;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
         this.ignoreSsl = ignoreSsl;
         this.checkDestinationCommit = checkDestinationCommit;
@@ -110,8 +143,12 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     private StandardUsernamePasswordCredentials getCredentials() {
         return CredentialsMatchers.firstOrNull(
-                          CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, this.job, ACL.SYSTEM,
-                                                                URIRequirementBuilder.fromUri(stashHost).build()),
+                          CredentialsProvider.lookupCredentials(
+                                  StandardUsernamePasswordCredentials.class,
+                                  this.job,
+                                  Tasks.getDefaultAuthenticationOf(this.job),
+                                  URIRequirementBuilder.fromUri(stashHost).build()
+                          ),
                           CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
     }
 
@@ -153,6 +190,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     public String getTargetBranchesToBuild() {
         return targetBranchesToBuild;
+    }
+
+    public boolean isCancelOutdatedJobsEnabled() {
+        return cancelOutdatedJobsEnabled;
     }
 
     @Override
@@ -197,7 +238,53 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         		values.add(new StringParameterValue(parameter, additionalParameters.get(parameter)));
         	}
         }
+
+        if (isCancelOutdatedJobsEnabled()) {
+            cancelPreviousJobsInQueueThatMatch(cause);
+            abortRunningJobsThatMatch(cause);
+        }
+
         return this.job.scheduleBuild2(0, cause, new ParametersAction(values));
+
+    }
+
+    private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {
+        logger.fine("Looking for queued jobs that match PR ID: " + stashCause.getPullRequestId());
+        Queue queue = Jenkins.getInstance().getQueue();
+        for (Queue.Item item : queue.getItems()) {
+            if (hasCauseFromTheSamePullRequest(item.getCauses(), stashCause)) {
+                logger.info("Canceling item in queue: " + item);
+                queue.cancel(item);
+            }
+        }
+    }
+
+    private void abortRunningJobsThatMatch(@Nonnull StashCause stashCause) {
+        logger.fine("Looking for running jobs that match PR ID: " + stashCause.getPullRequestId());
+        for (Object o : job.getBuilds()) {
+            if (o instanceof Build) {
+                Build build = (Build) o;
+                if (build.isBuilding() && hasCauseFromTheSamePullRequest(build.getCauses(), stashCause)) {
+                    logger.info("Aborting build: " + build + " since PR is outdated");
+                    build.getExecutor().interrupt(Result.ABORTED);
+                }
+            }
+        }
+    }
+
+    private boolean hasCauseFromTheSamePullRequest(@Nullable List<Cause> causes, @Nullable StashCause pullRequestCause) {
+        if (causes != null && pullRequestCause != null) {
+            for (Cause cause : causes) {
+                if (cause instanceof StashCause) {
+                    StashCause sc = (StashCause) cause;
+                    if (StringUtils.equals(sc.getPullRequestId(), pullRequestCause.getPullRequestId()) &&
+                            StringUtils.equals(sc.getSourceRepositoryName(), pullRequestCause.getSourceRepositoryName())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private List<ParameterValue> getDefaultParameters() {
@@ -264,8 +351,13 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             if (context == null || !context.hasPermission(Item.CONFIGURE)) {
                 return new ListBoxModel();
             }
-            return new StandardUsernameListBoxModel().withEmptySelection().withAll(
-               CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, ACL.SYSTEM, URIRequirementBuilder.fromUri(source).build()));
+            return new StandardUsernameListBoxModel()
+                    .includeEmptyValue()
+                    .includeAs(context instanceof Queue.Task
+                                    ? Tasks.getDefaultAuthenticationOf((Queue.Task) context)
+                                    : ACL.SYSTEM, context, StandardUsernamePasswordCredentials.class,
+                            URIRequirementBuilder.fromUri(source).build()
+                    );
         }
     }
 }
