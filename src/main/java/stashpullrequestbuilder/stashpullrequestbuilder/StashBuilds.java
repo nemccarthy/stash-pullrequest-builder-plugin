@@ -5,6 +5,7 @@ import hudson.model.Cause;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import jenkins.model.Jenkins;
+import jenkins.model.JenkinsLocationConfiguration;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -49,7 +50,8 @@ public class StashBuilds {
             return;
         }
         Result result = build.getResult();
-        String rootUrl = Jenkins.getInstance().getRootUrl();
+        JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
+        String rootUrl = globalConfig.getUrl();
         String buildUrl = "";
         if (rootUrl == null) {
             buildUrl = " PLEASE SET JENKINS ROOT URL FROM GLOBAL CONFIGURATION " + build.getUrl();

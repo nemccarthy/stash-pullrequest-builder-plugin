@@ -3,28 +3,44 @@ package stashpullrequestbuilder.stashpullrequestbuilder;
 import antlr.ANTLRException;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.Extension;
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Build;
+import hudson.model.Cause;
+import hudson.model.Item;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Queue;
+import hudson.model.Result;
+import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static java.lang.String.format;
 
 /**
  * Created by Nathan McCarthy
@@ -47,6 +63,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
     private final boolean deletePreviousBuildFinishComments;
+    private final boolean cancelOutdatedJobsEnabled;
 
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
 
@@ -70,8 +87,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             boolean onlyBuildOnComment,
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
-            String targetBranchesToBuild
-            ) throws ANTLRException {
+            String targetBranchesToBuild,
+            boolean cancelOutdatedJobsEnabled
+    ) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
         this.cron = cron;
@@ -80,6 +98,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         this.projectCode = projectCode;
         this.repositoryName = repositoryName;
         this.ciSkipPhrases = ciSkipPhrases;
+        this.cancelOutdatedJobsEnabled = cancelOutdatedJobsEnabled;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
         this.ignoreSsl = ignoreSsl;
         this.checkDestinationCommit = checkDestinationCommit;
@@ -159,6 +178,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         return mergeOnSuccess;
     }
 
+    public boolean isCancelOutdatedJobsEnabled() {
+        return cancelOutdatedJobsEnabled;
+    }
+
     @Override
     public void start(AbstractProject<?, ?> project, boolean newInstance) {
         try {
@@ -183,36 +206,79 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     public QueueTaskFuture<?> startJob(StashCause cause) {
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
-        values.put("sourceBranch", new StringParameterValue("sourceBranch", cause.getSourceBranch()));
-        values.put("targetBranch", new StringParameterValue("targetBranch", cause.getTargetBranch()));
-        values.put("sourceRepositoryOwner", new StringParameterValue("sourceRepositoryOwner", cause.getSourceRepositoryOwner()));
-        values.put("sourceRepositoryName", new StringParameterValue("sourceRepositoryName", cause.getSourceRepositoryName()));
-        values.put("pullRequestId", new StringParameterValue("pullRequestId", cause.getPullRequestId()));
-        values.put("destinationRepositoryOwner", new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
-        values.put("destinationRepositoryName", new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
-        values.put("pullRequestTitle", new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
-        values.put("sourceCommitHash", new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
-        values.put("destinationCommitHash", new StringParameterValue("destinationCommitHash", cause.getDestinationCommitHash()));
-        values.put("pullRequestVersion", new StringParameterValue("pullRequestVersion", cause.getPullRequestVersion()));
+        List<ParameterValue> values = getDefaultParameters();
+        values.add(new StringParameterValue("sourceBranch", cause.getSourceBranch()));
+        values.add(new StringParameterValue("targetBranch", cause.getTargetBranch()));
+        values.add(new StringParameterValue("sourceRepositoryOwner", cause.getSourceRepositoryOwner()));
+        values.add(new StringParameterValue("sourceRepositoryName", cause.getSourceRepositoryName()));
+        values.add(new StringParameterValue("pullRequestId", cause.getPullRequestId()));
+        values.add(new StringParameterValue("destinationRepositoryOwner", cause.getDestinationRepositoryOwner()));
+        values.add(new StringParameterValue("destinationRepositoryName", cause.getDestinationRepositoryName()));
+        values.add(new StringParameterValue("pullRequestTitle", cause.getPullRequestTitle()));
+        values.add(new StringParameterValue("sourceCommitHash", cause.getSourceCommitHash()));
+        values.add(new StringParameterValue("destinationCommitHash", cause.getDestinationCommitHash()));
 
         Map<String, String> additionalParameters = cause.getAdditionalParameters();
         if(additionalParameters != null){
         	for(String parameter : additionalParameters.keySet()){
-        		values.put(parameter, new StringParameterValue(parameter, additionalParameters.get(parameter)));
+        		values.add(new StringParameterValue(parameter, additionalParameters.get(parameter)));
         	}
         }
 
-        return this.job.scheduleBuild2(0, cause, new ParametersAction(new ArrayList(values.values())));
+        if (isCancelOutdatedJobsEnabled()) {
+            cancelPreviousJobsInQueueThatMatch(cause);
+            abortRunningJobsThatMatch(cause);
+        }
+
+        return this.job.scheduleBuild2(0, cause, new ParametersAction(values));
+
     }
 
-    private Map<String, ParameterValue> getDefaultParameters() {
-        Map<String, ParameterValue> values = new HashMap<String, ParameterValue>();
-        ParametersDefinitionProperty definitionProperty = this.job.getProperty(ParametersDefinitionProperty.class);
+    private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {
+        logger.fine("Looking for queued jobs that match PR ID: " + stashCause.getPullRequestId());
+        Queue queue = Jenkins.getInstance().getQueue();
+        for (Queue.Item item : queue.getItems()) {
+            if (hasCauseFromTheSamePullRequest(item.getCauses(), stashCause)) {
+                logger.info("Canceling item in queue: " + item);
+                queue.cancel(item);
+            }
+        }
+    }
 
+    private void abortRunningJobsThatMatch(@Nonnull StashCause stashCause) {
+        logger.fine("Looking for running jobs that match PR ID: " + stashCause.getPullRequestId());
+        for (Object o : job.getBuilds()) {
+            if (o instanceof Build) {
+                Build build = (Build) o;
+                if (build.isBuilding() && hasCauseFromTheSamePullRequest(build.getCauses(), stashCause)) {
+                    logger.info("Aborting build: " + build + " since PR is outdated");
+                    build.getExecutor().interrupt(Result.ABORTED);
+                }
+            }
+        }
+    }
+
+    private boolean hasCauseFromTheSamePullRequest(@Nullable List<Cause> causes, @Nullable StashCause pullRequestCause) {
+        if (causes != null && pullRequestCause != null) {
+            for (Cause cause : causes) {
+                if (cause instanceof StashCause) {
+                    StashCause sc = (StashCause) cause;
+                    if (StringUtils.equals(sc.getPullRequestId(), pullRequestCause.getPullRequestId()) &&
+                            StringUtils.equals(sc.getSourceRepositoryName(), pullRequestCause.getSourceRepositoryName())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private List<ParameterValue> getDefaultParameters() {
+        List<ParameterValue> values = new ArrayList<ParameterValue>();
+        ParametersDefinitionProperty definitionProperty = this.job.getProperty(ParametersDefinitionProperty.class);
         if (definitionProperty != null) {
             for (ParameterDefinition definition : definitionProperty.getParameterDefinitions()) {
-                values.put(definition.getName(), definition.getDefaultParameterValue());
+                values.add(definition.getDefaultParameterValue());
             }
         }
         return values;
@@ -221,8 +287,9 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     @Override
     public void run() {
         if(this.getBuilder().getProject().isDisabled()) {
-            logger.info("Build Skip.");
+            logger.info(format("Build Skip (%s).", getBuilder().getProject().getName()));
         } else {
+            logger.info(format("Build started (%s).", getBuilder().getProject().getName()));
             this.stashPullRequestsBuilder.run();
         }
         this.getDescriptor().save();

@@ -36,6 +36,9 @@
     <f:entry title="Keep PR comment only for most recent Build" field="deletePreviousBuildFinishComments">
       <f:checkbox default="false"/>
     </f:entry>
+    <f:entry title="Cancel outdated jobs" field="cancelOutdatedJobsEnabled">
+      <f:checkbox default="false"/>
+    </f:entry>
     <f:entry title="CI Skip Phrases" field="ciSkipPhrases">
       <f:textbox default="NO TEST" />
     </f:entry>
