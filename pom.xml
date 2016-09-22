@@ -8,7 +8,7 @@
 
   <artifactId>stash-pullrequest-builder</artifactId>
   <name>Stash Pullrequest Builder Plugin</name>
-  <version>1.5.4-SNAPSHOT</version>
+  <version>1.6.1-SNAPSHOT</version>
   <description>This Jenkins plugin builds pull requests from Stash and will report the test results.</description>
   <packaging>hpi</packaging>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/Stash+pullrequest+builder+plugin</url>
