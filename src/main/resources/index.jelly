@@ -1,6 +1,7 @@
 <!--
   This view is used to render the installed plugins page.
 -->
+<?jelly escape-by-default='true'?>
 <div>
   This plugin polls Atlassian Stash to determine whether there are Pull Requests that should be built.
 </div>
