@@ -6,6 +6,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 /**
  * Created by Nathan McCarthy
  */
+@SuppressWarnings("EQ_COMPARETO_USE_OBJECT_EQUALS")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StashPullRequestComment implements Comparable<StashPullRequestComment> {
 

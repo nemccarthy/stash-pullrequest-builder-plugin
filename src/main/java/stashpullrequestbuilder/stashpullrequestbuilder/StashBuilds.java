@@ -93,7 +93,6 @@ public class StashBuilds {
                         " because it's out of date";
                 logger.log(Level.INFO, logmsg);
                 listener.getLogger().println(logmsg);
-                additionalComment = additionalComment + "\n\n" + logmsg;
             }
         }
     }

@@ -43,6 +43,7 @@ import java.util.logging.Logger;
 /**
  * Created by Nathan McCarthy
  */
+@SuppressWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
 public class StashApiClient {
 
 	private static final int HTTP_REQUEST_TIMEOUT_SECONDS = 60;

@@ -45,6 +45,7 @@ import static java.lang.String.format;
 /**
  * Created by Nathan McCarthy
  */
+@SuppressWarnings({"WMI_WRONG_MAP_ITERATOR", "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"})
 public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     private static final Logger logger = Logger.getLogger(StashBuildTrigger.class.getName());
     private final String projectPath;
