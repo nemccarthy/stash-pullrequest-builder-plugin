@@ -1,9 +1,6 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
-import static java.lang.String.format;
-
 import hudson.model.Result;
-
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
@@ -20,6 +17,8 @@ import java.util.TreeMap;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.lang.String.format;
 
 /**
  * Created by Nathan McCarthy
@@ -288,8 +287,9 @@ public class StashRepository {
                     }
 
                     //These will match any start or finish message -- need to check commits
-                    String project_build_start = String.format(BUILD_START_REGEX, Pattern.quote(builder.getProject().getDisplayName()));
-                    String project_build_finished = String.format(BUILD_FINISH_REGEX, Pattern.quote(builder.getProject().getDisplayName()));
+                    String escapedBuildName = Pattern.quote(builder.getProject().getDisplayName());
+                    String project_build_start = String.format(BUILD_START_REGEX, escapedBuildName);
+                    String project_build_finished = String.format(BUILD_FINISH_REGEX, escapedBuildName);
                     Matcher startMatcher = Pattern.compile(project_build_start, Pattern.CASE_INSENSITIVE).matcher(content);
                     Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
 
