@@ -250,6 +250,7 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
         }
     }
 
+    @SuppressWarnings("NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE")
     private void abortRunningJobsThatMatch(@Nonnull StashCause stashCause) {
         logger.fine("Looking for running jobs that match PR ID: " + stashCause.getPullRequestId());
         for (Object o : job.getBuilds()) {
