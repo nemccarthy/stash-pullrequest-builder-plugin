@@ -327,6 +327,7 @@ public class StashApiClient {
         //tells the server that we want it to close the connection when it has sent the response.
         //address large amount of close_wait sockets client and fin sockets server side
         httppost.setRequestHeader("Connection", "close");
+        httppost.setRequestHeader("X-Atlassian-Token", "no-check"); //xsrf
 
         if(comment != null) {
             ObjectNode node = mapper.getNodeFactory().objectNode();

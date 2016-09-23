@@ -4,7 +4,6 @@ import hudson.model.AbstractBuild;
 import hudson.model.Cause;
 import hudson.model.Result;
 import hudson.model.TaskListener;
-import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 
 import java.io.IOException;
@@ -62,27 +61,6 @@ public class StashBuilds {
         repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
 
         String additionalComment = "";
-        StashBuildTrigger trig = StashBuildTrigger.getTrigger(build.getProject());
-        if(trig.getMergeOnSuccess() == true && build.getResult() == Result.SUCCESS)
-        {
-            boolean mergeStat = repository.mergePullRequest(cause.getPullRequestId(), cause.getPullRequestVersion());
-            if(mergeStat == true)
-            {
-                String logmsg = "Merged pull request " + cause.getPullRequestId() + "(" +
-                cause.getSourceBranch() + ") to branch " + cause.getTargetBranch();
-                logger.log(Level.INFO, logmsg);
-                listener.getLogger().println(logmsg);
-            }
-            else
-            {
-                String logmsg = "Failed to merge pull request " + cause.getPullRequestId() + "(" +
-                cause.getSourceBranch() + ") to branch " + cause.getTargetBranch() +
-                " because it's out of date";
-                logger.log(Level.INFO, logmsg);
-                listener.getLogger().println(logmsg);
-                additionalComment = additionalComment + "\n\n" + logmsg;
-            }
-        }
 
         StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
         if(comments != null) {
@@ -96,5 +74,27 @@ public class StashBuilds {
         repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
                 cause.getDestinationCommitHash(), result, buildUrl,
                 build.getNumber(), additionalComment, duration);
+
+        //Merge PR
+        StashBuildTrigger trig = StashBuildTrigger.getTrigger(build.getProject());
+        if(trig.getMergeOnSuccess() && build.getResult() == Result.SUCCESS) {
+            boolean mergeStat = repository.mergePullRequest(cause.getPullRequestId(), cause.getPullRequestVersion());
+            if(mergeStat == true)
+            {
+                String logmsg = "Merged pull request " + cause.getPullRequestId() + "(" +
+                        cause.getSourceBranch() + ") to branch " + cause.getTargetBranch();
+                logger.log(Level.INFO, logmsg);
+                listener.getLogger().println(logmsg);
+            }
+            else
+            {
+                String logmsg = "Failed to merge pull request " + cause.getPullRequestId() + "(" +
+                        cause.getSourceBranch() + ") to branch " + cause.getTargetBranch() +
+                        " because it's out of date";
+                logger.log(Level.INFO, logmsg);
+                listener.getLogger().println(logmsg);
+                additionalComment = additionalComment + "\n\n" + logmsg;
+            }
+        }
     }
 }
