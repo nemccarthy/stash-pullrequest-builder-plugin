@@ -1,12 +1,13 @@
 package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * Created by Nathan McCarthy
  */
-@SuppressWarnings("EQ_COMPARETO_USE_OBJECT_EQUALS")
+@SuppressFBWarnings("EQ_COMPARETO_USE_OBJECT_EQUALS")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StashPullRequestComment implements Comparable<StashPullRequestComment> {
 

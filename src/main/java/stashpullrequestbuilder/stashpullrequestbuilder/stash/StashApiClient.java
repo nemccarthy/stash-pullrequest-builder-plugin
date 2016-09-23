@@ -1,18 +1,24 @@
 package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 
-import org.apache.commons.httpclient.*;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.httpclient.ConnectTimeoutException;
+import org.apache.commons.httpclient.Credentials;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpClientError;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
-import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.httpclient.params.HttpConnectionParams;
+import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.io.IOUtils;
 import org.apache.http.params.CoreConnectionPNames;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
@@ -43,7 +49,7 @@ import java.util.logging.Logger;
 /**
  * Created by Nathan McCarthy
  */
-@SuppressWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
+@SuppressFBWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
 public class StashApiClient {
 
 	private static final int HTTP_REQUEST_TIMEOUT_SECONDS = 60;

@@ -1,5 +1,6 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Result;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
@@ -23,7 +24,7 @@ import static java.lang.String.format;
 /**
  * Created by Nathan McCarthy
  */
-@SuppressWarnings("WMI_WRONG_MAP_ITERATOR")
+@SuppressFBWarnings("WMI_WRONG_MAP_ITERATOR")
 public class StashRepository {
     private static final Logger logger = Logger.getLogger(StashRepository.class.getName());
     public static final String BUILD_START_MARKER = "[*BuildStarted* **%s**] %s into %s";
