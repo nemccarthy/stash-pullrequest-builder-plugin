@@ -77,50 +77,40 @@ public class StashApiClient {
         }
     }
 
-    public List<StashPullRequestResponseValue> getPullRequests() {
+    public List<StashPullRequestResponseValue> getPullRequests() throws IOException {
         List<StashPullRequestResponseValue> pullRequestResponseValues = new ArrayList<StashPullRequestResponseValue>();
-        try {
-            boolean isLastPage = false;
-            int start = 0;
-            while (!isLastPage) {
-                String response = getRequest(pullRequestsPath(start));
-                StashPullRequestResponse parsedResponse = parsePullRequestJson(response);
-                isLastPage = parsedResponse.getIsLastPage();
-                if (!isLastPage) {
-                    start = parsedResponse.getNextPageStart();
-                }
-                pullRequestResponseValues.addAll(parsedResponse.getPrValues());
+        boolean isLastPage = false;
+        int start = 0;
+        while (!isLastPage) {
+            String response = getRequest(pullRequestsPath(start));
+            StashPullRequestResponse parsedResponse = parsePullRequestJson(response);
+            isLastPage = parsedResponse.getIsLastPage();
+            if (!isLastPage) {
+                start = parsedResponse.getNextPageStart();
             }
-            return pullRequestResponseValues;
-        } catch (IOException e) {
-            logger.log(Level.WARNING, "invalid pull request response.", e);
+            pullRequestResponseValues.addAll(parsedResponse.getPrValues());
         }
-        return Collections.EMPTY_LIST;
+        return pullRequestResponseValues;
     }
 
     public List<StashPullRequestComment> getPullRequestComments(String projectCode, String commentRepositoryName,
-                                                                String pullRequestId) {
+                                                                String pullRequestId) throws IOException {
 
-        try {
-            boolean isLastPage = false;
-            int start = 0;
-            List<StashPullRequestActivityResponse> commentResponses = new ArrayList<StashPullRequestActivityResponse>();
-            while (!isLastPage) {
-                String response = getRequest(
-                        apiBaseUrl + projectCode + "/repos/" + commentRepositoryName + "/pull-requests/" +
-                                pullRequestId + "/activities?start=" + start);
-                StashPullRequestActivityResponse resp = parseCommentJson(response);
-                isLastPage = resp.getIsLastPage();
-                if (!isLastPage) {
-                    start = resp.getNextPageStart();
-                }
-                commentResponses.add(resp);
+        boolean isLastPage = false;
+        int start = 0;
+        List<StashPullRequestActivityResponse> commentResponses = new ArrayList<StashPullRequestActivityResponse>();
+        while (!isLastPage) {
+            String response = getRequest(
+                    apiBaseUrl + projectCode + "/repos/" + commentRepositoryName + "/pull-requests/" +
+                            pullRequestId + "/activities?start=" + start);
+            StashPullRequestActivityResponse resp = parseCommentJson(response);
+            isLastPage = resp.getIsLastPage();
+            if (!isLastPage) {
+                start = resp.getNextPageStart();
             }
-            return extractComments(commentResponses);
-        } catch (Exception e) {
-            logger.log(Level.WARNING, "invalid pull request response.", e);
+            commentResponses.add(resp);
         }
-        return Collections.EMPTY_LIST;
+        return extractComments(commentResponses);
     }
 
     public void deletePullRequestComment(String pullRequestId, String commentId) {

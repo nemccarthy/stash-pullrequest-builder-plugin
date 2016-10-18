@@ -8,6 +8,7 @@ import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMer
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
 
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -67,7 +68,7 @@ public class StashRepository {
                 trigger.isIgnoreSsl());
     }
 
-    public Collection<StashPullRequestResponseValue> getTargetPullRequests() {
+    public Collection<StashPullRequestResponseValue> getTargetPullRequests() throws IOException {
         logger.info(format("Fetch PullRequests (%s).", builder.getProject().getName()));
         List<StashPullRequestResponseValue> pullRequests = client.getPullRequests();
         List<StashPullRequestResponseValue> targetPullRequests = new ArrayList<StashPullRequestResponseValue>();
@@ -113,14 +114,14 @@ public class StashRepository {
         return result;
    }
 
-    public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest){
+    public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest) throws IOException {
         StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
         String owner = destination.getRepository().getProjectName();
         String repositoryName = destination.getRepository().getRepositoryName();
 
         String id = pullRequest.getId();
         List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
-        if (comments != null) {
+        if (!comments.isEmpty()) {
             Collections.sort(comments);
 //          Collections.reverse(comments);
 
@@ -142,7 +143,7 @@ public class StashRepository {
         return null;
     }
 
-    public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
+    public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) throws IOException {
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
         	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
                 if (trigger.getDeletePreviousBuildFinishComments()) {
@@ -215,7 +216,7 @@ public class StashRepository {
         return true;
     }
 
-    private void deletePreviousBuildFinishedComments(StashPullRequestResponseValue pullRequest) {
+    private void deletePreviousBuildFinishedComments(StashPullRequestResponseValue pullRequest) throws IOException {
 
         StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
         String owner = destination.getRepository().getProjectName();
@@ -224,7 +225,7 @@ public class StashRepository {
 
         List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
 
-        if (comments != null) {
+        if (!comments.isEmpty()) {
             Collections.sort(comments);
                 Collections.reverse(comments);
                 for (StashPullRequestComment comment : comments) {
@@ -243,7 +244,7 @@ public class StashRepository {
         }
     }
 
-    private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
+    private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) throws IOException {
 
         boolean shouldBuild = true;
 
@@ -279,7 +280,7 @@ public class StashRepository {
             String id = pullRequest.getId();
             List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
 
-            if (comments != null) {
+            if (!comments.isEmpty()) {
                 Collections.sort(comments);
                 Collections.reverse(comments);
                 for (StashPullRequestComment comment : comments) {

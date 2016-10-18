@@ -6,6 +6,7 @@ import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestRes
 import hudson.model.AbstractProject;
 
 import java.util.Collection;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -28,9 +29,13 @@ public class StashPullRequestsBuilder {
 
     public void run() {
         logger.info(format("Build Start (%s).", project.getName()));
-        this.repository.init();
-        Collection<StashPullRequestResponseValue> targetPullRequests = this.repository.getTargetPullRequests();
-        this.repository.addFutureBuildTasks(targetPullRequests);
+        try {
+            this.repository.init();
+            Collection<StashPullRequestResponseValue> targetPullRequests = this.repository.getTargetPullRequests();
+            this.repository.addFutureBuildTasks(targetPullRequests);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, format("Build Failed (%s).", project.getName()), e);
+        }
     }
 
     public StashPullRequestsBuilder setupBuilder() {
