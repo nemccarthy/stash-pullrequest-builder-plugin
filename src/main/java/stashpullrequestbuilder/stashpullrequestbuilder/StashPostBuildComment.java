@@ -18,6 +18,7 @@ import org.kohsuke.stapler.StaplerRequest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+// TODO: Make available in Jenkins Pipeline
 public class StashPostBuildComment extends Notifier {
     private static final Logger logger = Logger.getLogger(StashBuildTrigger.class.getName());
     private String buildSuccessfulComment;

@@ -2,8 +2,8 @@ package stashpullrequestbuilder.stashpullrequestbuilder;
 
 import static java.lang.String.format;
 
+import hudson.model.Job;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
-import hudson.model.AbstractProject;
 
 import java.util.Collection;
 import java.util.logging.Logger;
@@ -13,7 +13,7 @@ import java.util.logging.Logger;
  */
 public class StashPullRequestsBuilder {
     private static final Logger logger = Logger.getLogger(StashBuildTrigger.class.getName());
-    private AbstractProject<?, ?> project;
+    private Job<?, ?> job;
     private StashBuildTrigger trigger;
     private StashRepository repository;
     private StashBuilds builds;
@@ -27,14 +27,14 @@ public class StashPullRequestsBuilder {
     }
 
     public void run() {
-        logger.info(format("Build Start (%s).", project.getName()));
+        logger.info(format("Build Start (%s).", job.getName()));
         this.repository.init();
         Collection<StashPullRequestResponseValue> targetPullRequests = this.repository.getTargetPullRequests();
         this.repository.addFutureBuildTasks(targetPullRequests);
     }
 
     public StashPullRequestsBuilder setupBuilder() {
-        if (this.project == null || this.trigger == null) {
+        if (this.job == null || this.trigger == null) {
             throw new IllegalStateException();
         }
         this.repository = new StashRepository(this.trigger.getProjectPath(), this);
@@ -42,16 +42,16 @@ public class StashPullRequestsBuilder {
         return this;
     }
 
-    public void setProject(AbstractProject<?, ?> project) {
-        this.project = project;
+    public void setJob(Job<?, ?> job) {
+        this.job = job;
     }
 
     public void setTrigger(StashBuildTrigger trigger) {
         this.trigger = trigger;
     }
 
-    public AbstractProject<?, ?> getProject() {
-        return this.project;
+    public Job<?, ?> getJob() {
+        return this.job;
     }
 
     public StashBuildTrigger getTrigger() {
