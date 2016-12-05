@@ -207,10 +207,12 @@ public class StashRepository {
     private Boolean isPullRequestMergable(StashPullRequestResponseValue pullRequest) {
         if (trigger.isCheckMergeable() || trigger.isCheckNotConflicted()) {
             StashPullRequestMergableResponse mergable = client.getPullRequestMergeStatus(pullRequest.getId());
+            boolean res = true;
             if (trigger.isCheckMergeable())
-                return  mergable.getCanMerge();
+                res = res && mergable.getCanMerge();
             if (trigger.isCheckNotConflicted())
-                return !mergable.getConflicted();
+                res = res && !mergable.getConflicted();
+            return res;
         }
         return true;
     }
