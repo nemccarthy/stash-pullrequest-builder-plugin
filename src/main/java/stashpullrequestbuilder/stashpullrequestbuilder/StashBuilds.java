@@ -1,8 +1,8 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
-import hudson.model.AbstractBuild;
 import hudson.model.Cause;
 import hudson.model.Result;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import jenkins.model.JenkinsLocationConfiguration;
 
@@ -23,46 +23,46 @@ public class StashBuilds {
         this.repository = repository;
     }
 
-    public StashCause getCause(AbstractBuild build) {
-        Cause cause = build.getCause(StashCause.class);
+    public StashCause getCause(Run run) {
+        Cause cause = run.getCause(StashCause.class);
         if (cause == null || !(cause instanceof StashCause)) {
             return null;
         }
         return (StashCause) cause;
     }
 
-    public void onStarted(AbstractBuild build) {
-        StashCause cause = this.getCause(build);
+    public void onStarted(Run run) {
+        StashCause cause = this.getCause(run);
         if (cause == null) {
             return;
         }
         try {
-            build.setDescription(cause.getShortDescription());
+            run.setDescription(cause.getShortDescription());
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Can't update build description", e);
         }
     }
 
-    public void onCompleted(AbstractBuild build, TaskListener listener) {
-        StashCause cause = this.getCause(build);
+    public void onCompleted(Run run, TaskListener listener) {
+        StashCause cause = this.getCause(run);
         if (cause == null) {
             return;
         }
-        Result result = build.getResult();
+        Result result = run.getResult();
         JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
         String rootUrl = globalConfig.getUrl();
         String buildUrl = "";
         if (rootUrl == null) {
-            buildUrl = " PLEASE SET JENKINS ROOT URL FROM GLOBAL CONFIGURATION " + build.getUrl();
+            buildUrl = " PLEASE SET JENKINS ROOT URL FROM GLOBAL CONFIGURATION " + run.getUrl();
         }
         else {
-            buildUrl = rootUrl + build.getUrl();
+            buildUrl = rootUrl + run.getUrl();
         }
         repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
 
         String additionalComment = "";
 
-        StashPostBuildCommentAction comments = build.getAction(StashPostBuildCommentAction.class);
+        StashPostBuildCommentAction comments = run.getAction(StashPostBuildCommentAction.class);
         if(comments != null) {
             String buildComment = result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment();
 
@@ -70,14 +70,14 @@ public class StashBuilds {
               additionalComment = "\n\n" + buildComment;
             }
         }
-        String duration = build.getDurationString();
+        String duration = run.getDurationString();
         repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
                 cause.getDestinationCommitHash(), result, buildUrl,
-                build.getNumber(), additionalComment, duration);
+                run.getNumber(), additionalComment, duration);
 
         //Merge PR
-        StashBuildTrigger trig = StashBuildTrigger.getTrigger(build.getProject());
-        if(trig.getMergeOnSuccess() && build.getResult() == Result.SUCCESS) {
+        StashBuildTrigger trig = StashBuildTrigger.getTrigger(run.getParent());
+        if(trig.getMergeOnSuccess() && run.getResult() == Result.SUCCESS) {
             boolean mergeStat = repository.mergePullRequest(cause.getPullRequestId(), cause.getPullRequestVersion());
             if(mergeStat == true)
             {

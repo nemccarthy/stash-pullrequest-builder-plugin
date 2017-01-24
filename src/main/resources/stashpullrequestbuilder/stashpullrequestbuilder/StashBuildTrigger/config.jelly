@@ -26,7 +26,7 @@
       <f:checkbox />
     </f:entry>
     <f:entry title="Build only if Stash reports no conflicts" field="checkNotConflicted">
-      <f:checkbox default="false"/>
+      <f:checkbox default="true"/>
     </f:entry>
     <f:entry title="Build only if PR is mergeable" field="checkMergeable">
       <f:checkbox default="false"/>

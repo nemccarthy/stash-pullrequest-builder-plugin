@@ -69,7 +69,7 @@ public class StashRepository {
     }
 
     public Collection<StashPullRequestResponseValue> getTargetPullRequests() throws IOException {
-        logger.info(format("Fetch PullRequests (%s).", builder.getProject().getName()));
+        logger.info(format("Fetch PullRequests (%s).", builder.getJob().getName()));
         List<StashPullRequestResponseValue> pullRequests = client.getPullRequests();
         List<StashPullRequestResponseValue> targetPullRequests = new ArrayList<StashPullRequestResponseValue>();
         for(StashPullRequestResponseValue pullRequest : pullRequests) {
@@ -81,11 +81,11 @@ public class StashRepository {
     }
 
     public String postBuildStartCommentTo(StashPullRequestResponseValue pullRequest) {
-            String sourceCommit = pullRequest.getFromRef().getLatestCommit();
-            String destinationCommit = pullRequest.getToRef().getLatestCommit();
-            String comment = format(BUILD_START_MARKER, builder.getProject().getDisplayName(), sourceCommit, destinationCommit);
-            StashPullRequestComment commentResponse = this.client.postPullRequestComment(pullRequest.getId(), comment);
-            return commentResponse.getCommentId().toString();
+        String sourceCommit = pullRequest.getFromRef().getLatestCommit();
+        String destinationCommit = pullRequest.getToRef().getLatestCommit();
+        String comment = format(BUILD_START_MARKER, builder.getJob().getDisplayName(), sourceCommit, destinationCommit);
+        StashPullRequestComment commentResponse = this.client.postPullRequestComment(pullRequest.getId(), comment);
+        return commentResponse.getCommentId().toString();
     }
 
     public static AbstractMap.SimpleEntry<String,String> getParameter(String content){
@@ -193,7 +193,7 @@ public class StashRepository {
 
     public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, Result buildResult, String buildUrl, int buildNumber, String additionalComment, String duration) {
         String message = getMessageForBuildResult(buildResult);
-        String comment = format(BUILD_FINISH_SENTENCE, builder.getProject().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
+        String comment = format(BUILD_FINISH_SENTENCE, builder.getJob().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
 
         comment = comment.concat(additionalComment);
 
@@ -208,10 +208,12 @@ public class StashRepository {
     private Boolean isPullRequestMergable(StashPullRequestResponseValue pullRequest) {
         if (trigger.isCheckMergeable() || trigger.isCheckNotConflicted()) {
             StashPullRequestMergableResponse mergable = client.getPullRequestMergeStatus(pullRequest.getId());
+            boolean res = true;
             if (trigger.isCheckMergeable())
-                return  mergable.getCanMerge();
+                res = res && mergable.getCanMerge();
             if (trigger.isCheckNotConflicted())
-                return !mergable.getConflicted();
+                res = res && !mergable.getConflicted();
+            return res;
         }
         return true;
     }
@@ -234,7 +236,7 @@ public class StashRepository {
                         continue;
                     }
 
-                    String project_build_finished = format(BUILD_FINISH_REGEX, builder.getProject().getDisplayName());
+                    String project_build_finished = format(BUILD_FINISH_REGEX, builder.getJob().getDisplayName());
                     Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
 
                     if (finishMatcher.find()) {
@@ -290,7 +292,7 @@ public class StashRepository {
                     }
 
                     //These will match any start or finish message -- need to check commits
-                    String escapedBuildName = Pattern.quote(builder.getProject().getDisplayName());
+                    String escapedBuildName = Pattern.quote(builder.getJob().getDisplayName());
                     String project_build_start = String.format(BUILD_START_REGEX, escapedBuildName);
                     String project_build_finished = String.format(BUILD_FINISH_REGEX, escapedBuildName);
                     Matcher startMatcher = Pattern.compile(project_build_start, Pattern.CASE_INSENSITIVE).matcher(content);
