@@ -8,10 +8,11 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
-import hudson.model.AbstractProject;
 import hudson.model.Build;
 import hudson.model.Cause;
+import hudson.model.CauseAction;
 import hudson.model.Item;
+import hudson.model.Job;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParameterValue;
 import hudson.model.ParametersAction;
@@ -26,7 +27,9 @@ import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import jenkins.model.ParameterizedJobMixIn;
 import net.sf.json.JSONObject;
+import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -47,7 +50,7 @@ import static java.lang.String.format;
  * Created by Nathan McCarthy
  */
 @SuppressFBWarnings({"WMI_WRONG_MAP_ITERATOR", "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"})
-public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
+public class StashBuildTrigger extends Trigger<Job<?, ?>> {
     private static final Logger logger = Logger.getLogger(StashBuildTrigger.class.getName());
     private final String projectPath;
     private final String cron;
@@ -130,11 +133,15 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     private StandardUsernamePasswordCredentials getCredentials() {
+        Authentication defaultAuth = null;
+        if (job instanceof Queue.Task) {
+            defaultAuth = Tasks.getDefaultAuthenticationOf((Queue.Task)this.job);
+        }
         return CredentialsMatchers.firstOrNull(
                           CredentialsProvider.lookupCredentials(
                                   StandardUsernamePasswordCredentials.class,
                                   this.job,
-                                  Tasks.getDefaultAuthenticationOf(this.job),
+                                  defaultAuth,
                                   URIRequirementBuilder.fromUri(stashHost).build()
                           ),
                           CredentialsMatchers.allOf(CredentialsMatchers.withId(credentialsId)));
@@ -189,21 +196,27 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
     }
 
     @Override
-    public void start(AbstractProject<?, ?> project, boolean newInstance) {
+    public void start(Job<?, ?> job, boolean newInstance) {
         try {
             this.stashPullRequestsBuilder = StashPullRequestsBuilder.getBuilder();
-            this.stashPullRequestsBuilder.setProject(project);
+            this.stashPullRequestsBuilder.setJob(job);
             this.stashPullRequestsBuilder.setTrigger(this);
             this.stashPullRequestsBuilder.setupBuilder();
         } catch(IllegalStateException e) {
             logger.log(Level.SEVERE, "Can't start trigger", e);
             return;
         }
-        super.start(project, newInstance);
+        super.start(job, newInstance);
     }
 
-    public static StashBuildTrigger getTrigger(AbstractProject project) {
-        Trigger trigger = project.getTrigger(StashBuildTrigger.class);
+    public static StashBuildTrigger getTrigger(Job job) {
+        if (!(job instanceof ParameterizedJobMixIn.ParameterizedJob)) {
+            return null;
+        }
+        
+        ParameterizedJobMixIn.ParameterizedJob pjob = (ParameterizedJobMixIn.ParameterizedJob) job;
+
+        Trigger trigger = pjob.getTriggers().get(descriptor);
         return (StashBuildTrigger)trigger;
     }
 
@@ -235,9 +248,13 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
             cancelPreviousJobsInQueueThatMatch(cause);
             abortRunningJobsThatMatch(cause);
         }
-
-        return this.job.scheduleBuild2(0, cause, new ParametersAction(values));
-
+        
+        return new ParameterizedJobMixIn() {
+            @Override
+            protected Job asJob() {
+                return StashBuildTrigger.this.job;
+            }
+        }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));        
     }
 
     private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {
@@ -292,10 +309,10 @@ public class StashBuildTrigger extends Trigger<AbstractProject<?, ?>> {
 
     @Override
     public void run() {
-        if(this.getBuilder().getProject().isDisabled()) {
-            logger.info(format("Build Skip (%s).", getBuilder().getProject().getName()));
+        if(!this.getBuilder().getJob().isBuildable()) {
+            logger.info(format("Build Skip (%s).", getBuilder().getJob().getName()));
         } else {
-            logger.info(format("Build started (%s).", getBuilder().getProject().getName()));
+            logger.info(format("Build started (%s).", getBuilder().getJob().getName()));
             this.stashPullRequestsBuilder.run();
         }
         this.getDescriptor().save();
