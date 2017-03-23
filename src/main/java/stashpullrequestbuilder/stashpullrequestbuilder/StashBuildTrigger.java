@@ -261,7 +261,8 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         logger.fine("Looking for queued jobs that match PR ID: " + stashCause.getPullRequestId());
         Queue queue = Jenkins.getInstance().getQueue();
         for (Queue.Item item : queue.getItems()) {
-            if (hasCauseFromTheSamePullRequest(item.getCauses(), stashCause)) {
+            logger.fine("Task name: " + item.task.getDisplayName() + " - Job Name: " + job.getDisplayName());
+            if (job.getDisplayName().equals(item.task.getDisplayName()) && hasCauseFromTheSamePullRequest(item.getCauses(), stashCause)) {
                 logger.info("Canceling item in queue: " + item);
                 queue.cancel(item);
             }
