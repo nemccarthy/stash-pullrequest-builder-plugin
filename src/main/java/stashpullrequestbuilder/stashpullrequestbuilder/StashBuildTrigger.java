@@ -61,6 +61,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
     private final String ciSkipPhrases;
     private final String ciBuildPhrases;
     private final String targetBranchesToBuild;
+    private final String sourceBranchesToBuild;
     private final boolean ignoreSsl;
     private final boolean checkDestinationCommit;
     private final boolean checkMergeable;
@@ -93,6 +94,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
             String targetBranchesToBuild,
+            String sourceBranchesToBuild,
             boolean cancelOutdatedJobsEnabled
     ) throws ANTLRException {
         super(cron);
@@ -113,6 +115,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         this.onlyBuildOnComment = onlyBuildOnComment;
         this.deletePreviousBuildFinishComments = deletePreviousBuildFinishComments;
         this.targetBranchesToBuild = targetBranchesToBuild;
+        this.sourceBranchesToBuild = sourceBranchesToBuild;
     }
 
     public String getStashHost() {
@@ -185,6 +188,10 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
 
     public String getTargetBranchesToBuild() {
         return targetBranchesToBuild;
+    }
+
+    public String getSourceBranchesToBuild() {
+        return sourceBranchesToBuild;
     }
 
     public boolean getMergeOnSuccess() {

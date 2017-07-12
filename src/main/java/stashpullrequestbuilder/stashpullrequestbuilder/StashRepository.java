@@ -260,6 +260,11 @@ public class StashRepository {
                 return false;
             }
 
+            if (!isFromSourceBranch(pullRequest)) {
+                logger.info("Skipping PR: " + pullRequest.getId() + " as sourcing from branch: " + pullRequest.getFromRef().getBranch().getName());
+                return false;
+            }
+
             if(!isPullRequestMergable(pullRequest)) {
                 logger.info("Skipping PR: " + pullRequest.getId() + " as cannot be merged");
                 return false;
@@ -351,6 +356,20 @@ public class StashRepository {
             String[] branches = targetBranchesToBuild.split(",");
             for(String branch : branches) {
                 if (pullRequest.getToRef().getBranch().getName().matches(branch.trim())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isFromSourceBranch(StashPullRequestResponseValue pullRequest) {
+        String sourceBranchesToBuild = this.trigger.getSourceBranchesToBuild();
+        if (sourceBranchesToBuild !=null && !"".equals(sourceBranchesToBuild)) {
+            String[] branches = sourceBranchesToBuild.split(",");
+            for(String branch : branches) {
+                if (pullRequest.getFromRef().getBranch().getName().matches(branch.trim())) {
                     return true;
                 }
             }
