@@ -19,6 +19,7 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.auth.BasicScheme;
@@ -38,8 +39,9 @@ import java.net.URI;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
@@ -194,12 +196,21 @@ public class StashApiClient {
     private HttpClient getHttpClient() {
         HttpClientBuilder builder = HttpClientBuilder.create().useSystemProperties();
         if (this.ignoreSsl) {
+            logger.log(Level.FINEST, "Ignoring SSL");
             try {
-                SSLContextBuilder sslContextBuilder = new SSLContextBuilder();
 
-                sslContextBuilder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+                SSLContextBuilder sslContextBuilder = new SSLContextBuilder();
+                sslContextBuilder.loadTrustMaterial(null, new TrustStrategy() {
+
+                    @Override
+                    public boolean isTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+                        return true;
+                    }
+                });
+
                 SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContextBuilder.build(), NoopHostnameVerifier.INSTANCE);
                 builder.setSSLSocketFactory(sslsf);
+
             } catch (NoSuchAlgorithmException e) {
                 logger.log(Level.SEVERE, "Failing to setup the SSLConnectionFactory: " + e.toString());
                 throw new RuntimeException(e);
