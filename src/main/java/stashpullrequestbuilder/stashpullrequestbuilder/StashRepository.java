@@ -204,6 +204,10 @@ public class StashRepository {
         return this.client.mergePullRequest(pullRequestId, version);
     }
 
+    public void markStatus(String pullRequestId, String status) {
+        this.client.markStatus(pullRequestId, status);
+    }
+
     private Boolean isPullRequestMergable(StashPullRequestResponseValue pullRequest) {
         if (trigger.isCheckMergeable() || trigger.isCheckNotConflicted()) {
             StashPullRequestMergableResponse mergable = client.getPullRequestMergeStatus(pullRequest.getId());

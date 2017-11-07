@@ -75,6 +75,16 @@ public class StashBuilds {
                 cause.getDestinationCommitHash(), result, buildUrl,
                 run.getNumber(), additionalComment, duration);
 
+        // Mark PR as Approved or Needs Work
+        StashMarkStatus status = new StashMarkStatus();
+        status.handleStatus(
+                trigger.isApproveOnBuildSuccessful(),
+                trigger.isNeedsWorkOnBuildFailure(),
+                cause.getPullRequestId(),
+                run.getResult(),
+                repository
+        );
+
         //Merge PR
         StashBuildTrigger trig = StashBuildTrigger.getTrigger(run.getParent());
         if(trig.getMergeOnSuccess() && run.getResult() == Result.SUCCESS) {
