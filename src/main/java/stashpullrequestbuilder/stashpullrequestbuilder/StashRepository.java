@@ -143,12 +143,15 @@ public class StashRepository {
     }
 
     public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
-        for(StashPullRequestResponseValue pullRequest : pullRequests) {
-        	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
-                if (trigger.getDeletePreviousBuildFinishComments()) {
-                    deletePreviousBuildFinishedComments(pullRequest);
-                }
-            String commentId = postBuildStartCommentTo(pullRequest);
+        for (StashPullRequestResponseValue pullRequest : pullRequests) {
+            Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
+            String commentId = null;
+            if (trigger.getDeletePreviousBuildFinishComments()) {
+                deletePreviousBuildFinishedComments(pullRequest);
+            }
+            if (!trigger.isDisableBuildComments()) {
+                commentId = postBuildStartCommentTo(pullRequest);
+            }
             StashCause cause = new StashCause(
                     trigger.getStashHost(),
                     pullRequest.getFromRef().getBranch().getName(),
@@ -165,12 +168,13 @@ public class StashRepository {
                     pullRequest.getVersion(),
                     additionalParameters);
             this.builder.getTrigger().startJob(cause);
-
         }
     }
 
     public void deletePullRequestComment(String pullRequestId, String commentId) {
-        this.client.deletePullRequestComment(pullRequestId, commentId);
+        if (pullRequestId != null && commentId != null) {
+            this.client.deletePullRequestComment(pullRequestId, commentId);
+        }
     }
 
     private String getMessageForBuildResult(Result result) {

@@ -67,6 +67,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
     private final boolean mergeOnSuccess;
     private final boolean checkNotConflicted;
     private final boolean onlyBuildOnComment;
+    private final boolean disableBuildComments;
     private final boolean deletePreviousBuildFinishComments;
     private final boolean cancelOutdatedJobsEnabled;
 
@@ -93,7 +94,8 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             String ciBuildPhrases,
             boolean deletePreviousBuildFinishComments,
             String targetBranchesToBuild,
-            boolean cancelOutdatedJobsEnabled
+            boolean cancelOutdatedJobsEnabled,
+            boolean disableBuildComments
     ) throws ANTLRException {
         super(cron);
         this.projectPath = projectPath;
@@ -113,6 +115,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         this.onlyBuildOnComment = onlyBuildOnComment;
         this.deletePreviousBuildFinishComments = deletePreviousBuildFinishComments;
         this.targetBranchesToBuild = targetBranchesToBuild;
+        this.disableBuildComments = disableBuildComments;
     }
 
     public String getStashHost() {
@@ -179,6 +182,10 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         return ignoreSsl;
     }
 
+    public boolean isDisableBuildComments() {
+        return disableBuildComments;
+    }
+
     public boolean getDeletePreviousBuildFinishComments() {
         return deletePreviousBuildFinishComments;
     }
@@ -213,7 +220,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         if (!(job instanceof ParameterizedJobMixIn.ParameterizedJob)) {
             return null;
         }
-        
+
         ParameterizedJobMixIn.ParameterizedJob pjob = (ParameterizedJobMixIn.ParameterizedJob) job;
 
         Trigger trigger = pjob.getTriggers().get(descriptor);
@@ -248,13 +255,13 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             cancelPreviousJobsInQueueThatMatch(cause);
             abortRunningJobsThatMatch(cause);
         }
-        
+
         return new ParameterizedJobMixIn() {
             @Override
             protected Job asJob() {
                 return StashBuildTrigger.this.job;
             }
-        }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));        
+        }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));
     }
 
     private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {
