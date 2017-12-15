@@ -1,5 +1,6 @@
 package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
 
@@ -26,6 +27,8 @@ public class StashPullRequestResponseValue {
     private String id; //
 
     private String version;
+
+    private long lastActionTimestamp;
 
     public String getDescription() {
         return description;
@@ -119,6 +122,15 @@ public class StashPullRequestResponseValue {
         this.updatedDate = updatedDate;
     }
 
+    @JsonIgnore
+    public long getLastActionTimestamp() {
+        return lastActionTimestamp;
+    }
+
+    @JsonIgnore
+    public void setLastActionTimestamp(long lastActionTimestamp) {
+        this.lastActionTimestamp = lastActionTimestamp;
+    }
 
     public String getId() {
         return id;
