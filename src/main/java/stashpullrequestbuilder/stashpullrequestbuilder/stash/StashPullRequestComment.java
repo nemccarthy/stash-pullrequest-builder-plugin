@@ -1,8 +1,12 @@
 package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.lang.builder.CompareToBuilder;
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.joda.time.DateTime;
 
 /**
  * Created by Nathan McCarthy
@@ -13,7 +17,7 @@ public class StashPullRequestComment implements Comparable<StashPullRequestComme
 
     private Integer commentId;//
     private String text;
-
+    private DateTime createdDate;
 
     @JsonProperty("id")
     public Integer getCommentId() {
@@ -33,14 +37,27 @@ public class StashPullRequestComment implements Comparable<StashPullRequestComme
         this.text = text;
     }
 
+    public DateTime getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(DateTime createdDate) {
+        this.createdDate = createdDate;
+    }
 
     public int compareTo(StashPullRequestComment target) {
-        if (this.getCommentId() > target.getCommentId()) {
-            return 1;
-        } else if (this.getCommentId().equals(target.getCommentId())) {
-            return 0;
-        } else {
-            return -1;
-        }
+        return new CompareToBuilder()
+                .append(this.createdDate, target.createdDate)
+                .append(this.commentId, target.commentId)
+                .toComparison();
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+                .append("createdDate", createdDate)
+                .append("commentId", commentId)
+                .append("text", text)
+                .toString();
     }
 }
