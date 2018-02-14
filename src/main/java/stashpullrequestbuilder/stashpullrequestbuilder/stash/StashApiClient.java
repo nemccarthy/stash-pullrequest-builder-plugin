@@ -1,6 +1,23 @@
 package stashpullrequestbuilder.stashpullrequestbuilder.stash;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -25,28 +42,15 @@ import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.ProxyConfiguration;
+import jenkins.model.Jenkins;
 
 /**
  * Created by Nathan McCarthy
@@ -67,14 +71,16 @@ public class StashApiClient {
     private String repositoryName;
     private Credentials credentials;
     private boolean ignoreSsl;
+    private boolean overrideProxy;
 
 
-    public StashApiClient(String stashHost, String username, String password, String project, String repositoryName, boolean ignoreSsl) {
+    public StashApiClient(String stashHost, String username, String password, String project, String repositoryName, boolean ignoreSsl, boolean overrideProxy) {
         this.credentials = new UsernamePasswordCredentials(username, password);
         this.project = project;
         this.repositoryName = repositoryName;
         this.apiBaseUrl = stashHost.replaceAll("/$", "") + "/rest/api/1.0/projects/";
         this.ignoreSsl = ignoreSsl;
+        this.overrideProxy = overrideProxy;
     }
 
     public List<StashPullRequestResponseValue> getPullRequests() {
@@ -211,6 +217,24 @@ public class StashApiClient {
                 throw new RuntimeException(e);
             }
         }
+
+        Jenkins instance = Jenkins.getInstance();
+        if (this.overrideProxy && instance != null) {
+           ProxyConfiguration proxy = instance.proxy;
+           String proxyName = proxy.name;
+           int    proxyPort = proxy.port;
+           String proxyUser = proxy.getUserName();
+           String proxyPass = proxy.getPassword();
+
+           if (proxyUser != null && proxyPass != null) {
+              CredentialsProvider creds = new BasicCredentialsProvider();
+              creds.setCredentials(new AuthScope(proxyName, proxyPort), new UsernamePasswordCredentials(proxyUser, proxyPass));
+              builder.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy())
+              .setDefaultCredentialsProvider(creds);
+           }
+           builder.setProxy(new HttpHost(proxy.name, proxy.port));
+
+        }
         return builder.build();
     }
 
@@ -267,7 +291,7 @@ public class StashApiClient {
             }.init(client, httpget, context));
             thread = new Thread(httpTask);
             thread.start();
-            response = httpTask.get((long) StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            response = httpTask.get(StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         } catch (TimeoutException e) {
             e.printStackTrace();
@@ -325,7 +349,7 @@ public class StashApiClient {
             }.init(client, httpDelete, context));
             thread = new Thread(httpTask);
             thread.start();
-            res = httpTask.get((long) StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            res = httpTask.get(StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         } catch (TimeoutException e) {
             e.printStackTrace();
@@ -412,7 +436,7 @@ public class StashApiClient {
             }.init(client, httppost, context));
             thread = new Thread(httpTask);
             thread.start();
-            response = httpTask.get((long) StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            response = httpTask.get(StashApiClient.HTTP_REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
         } catch (TimeoutException e) {
             e.printStackTrace();

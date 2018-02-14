@@ -1,11 +1,30 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
-import antlr.ANTLRException;
+import static java.lang.String.format;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.acegisecurity.Authentication;
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
+
+import antlr.ANTLRException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Build;
@@ -29,22 +48,6 @@ import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import net.sf.json.JSONObject;
-import org.acegisecurity.Authentication;
-import org.apache.commons.lang.StringUtils;
-import org.kohsuke.stapler.AncestorInPath;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import static java.lang.String.format;
 
 /**
  * Created by Nathan McCarthy
@@ -62,6 +65,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
     private final String ciBuildPhrases;
     private final String targetBranchesToBuild;
     private final boolean ignoreSsl;
+    private final boolean overrideProxy;
     private final boolean checkDestinationCommit;
     private final boolean checkMergeable;
     private final boolean mergeOnSuccess;
@@ -85,6 +89,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             String repositoryName,
             String ciSkipPhrases,
             boolean ignoreSsl,
+            boolean overrideProxy,
             boolean checkDestinationCommit,
             boolean checkMergeable,
             boolean mergeOnSuccess,
@@ -106,6 +111,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         this.cancelOutdatedJobsEnabled = cancelOutdatedJobsEnabled;
         this.ciBuildPhrases = ciBuildPhrases == null ? "test this please" : ciBuildPhrases;
         this.ignoreSsl = ignoreSsl;
+        this.overrideProxy = overrideProxy;
         this.checkDestinationCommit = checkDestinationCommit;
         this.checkMergeable = checkMergeable;
         this.mergeOnSuccess = mergeOnSuccess;
@@ -179,6 +185,10 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         return ignoreSsl;
     }
 
+    public boolean isOverrideProxy() {
+       return overrideProxy;
+    }
+
     public boolean getDeletePreviousBuildFinishComments() {
         return deletePreviousBuildFinishComments;
     }
@@ -213,7 +223,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         if (!(job instanceof ParameterizedJobMixIn.ParameterizedJob)) {
             return null;
         }
-        
+
         ParameterizedJobMixIn.ParameterizedJob pjob = (ParameterizedJobMixIn.ParameterizedJob) job;
 
         Trigger trigger = pjob.getTriggers().get(descriptor);
@@ -248,13 +258,13 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             cancelPreviousJobsInQueueThatMatch(cause);
             abortRunningJobsThatMatch(cause);
         }
-        
+
         return new ParameterizedJobMixIn() {
             @Override
             protected Job asJob() {
                 return StashBuildTrigger.this.job;
             }
-        }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));        
+        }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));
     }
 
     private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {

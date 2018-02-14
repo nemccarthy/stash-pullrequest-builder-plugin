@@ -1,12 +1,6 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import hudson.model.Result;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
-import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
+import static java.lang.String.format;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -19,7 +13,13 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.String.format;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.model.Result;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValue;
+import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestResponseValueRepository;
 
 /**
  * Created by Nathan McCarthy
@@ -64,7 +64,8 @@ public class StashRepository {
                 trigger.getPassword(),
                 trigger.getProjectCode(),
                 trigger.getRepositoryName(),
-                trigger.isIgnoreSsl());
+                trigger.isIgnoreSsl(),
+                trigger.isOverrideProxy());
     }
 
     public Collection<StashPullRequestResponseValue> getTargetPullRequests() {
