@@ -372,7 +372,8 @@ public class StashRepository {
         return false;
     }
 
-    private boolean isPhrasesContain(String text, String phrase) {
-        return text != null && text.toLowerCase().contains(phrase.trim().toLowerCase());
+    /* Using a regex expression rather then only tests */
+    private boolean isPhrasesContain(String text, String regex) {
+        return text != null && Pattern.compile(regex).matcher(text).find();
     }
 }
