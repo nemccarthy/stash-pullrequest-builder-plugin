@@ -1,14 +1,14 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import hudson.model.Cause;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import jenkins.model.JenkinsLocationConfiguration;
-
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import jenkins.model.Jenkins;
 
 /**
  * Created by Nathan McCarthy
@@ -49,8 +49,8 @@ public class StashBuilds {
             return;
         }
         Result result = run.getResult();
-        JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
-        String rootUrl = globalConfig.getUrl();
+        String rootUrl = Jenkins.getInstanceOrNull().getRootUrl();
+
         String buildUrl = "";
         if (rootUrl == null) {
             buildUrl = " PLEASE SET JENKINS ROOT URL FROM GLOBAL CONFIGURATION " + run.getUrl();
