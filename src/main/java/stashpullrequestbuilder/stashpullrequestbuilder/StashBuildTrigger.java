@@ -216,7 +216,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         
         ParameterizedJobMixIn.ParameterizedJob pjob = (ParameterizedJobMixIn.ParameterizedJob) job;
 
-        Trigger trigger = pjob.getTriggers().get(descriptor);
+        Trigger trigger = (Trigger)pjob.getTriggers().get(descriptor);
         return (StashBuildTrigger)trigger;
     }
 
