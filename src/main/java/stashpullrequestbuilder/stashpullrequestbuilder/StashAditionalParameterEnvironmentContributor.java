@@ -43,7 +43,7 @@ public class StashAditionalParameterEnvironmentContributor extends EnvironmentCo
             return;
         }
         StringParameterValue value = (StringParameterValue) pa.getParameter(key);
-        envs.put(key, getString(value.value, ""));
+        envs.put(key, getString((String) value.getValue(), ""));
     }
 
     private static String getString(String actual,
