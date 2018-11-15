@@ -7,7 +7,7 @@
   </parent>
     <properties>
         <java.level>8</java.level>
-        <jenkins.version>2.149</jenkins.version>
+        <jenkins.version>2.147</jenkins.version>
     </properties>
     <!--<properties>-->
         <!--<jenkins.version>2.7.4</jenkins.version>-->
