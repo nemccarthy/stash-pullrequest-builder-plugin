@@ -19,6 +19,7 @@ import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
 import hudson.model.Result;
+import hudson.model.Run;
 import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.model.queue.Tasks;
@@ -245,8 +246,8 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         }
 
         if (isCancelOutdatedJobsEnabled()) {
-            cancelPreviousJobsInQueueThatMatch(cause);
-            abortRunningJobsThatMatch(cause);
+            cancelPreviousJobsInQueue(cause);
+            abortPreviousRunningJobs(cause);
         }
         
         return new ParameterizedJobMixIn() {
@@ -257,7 +258,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));        
     }
 
-    private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {
+    private void cancelPreviousJobsInQueue(@Nonnull StashCause stashCause) {
         logger.fine("Looking for queued jobs that match PR ID: " + stashCause.getPullRequestId());
         Queue queue = Jenkins.getInstance().getQueue();
         for (Queue.Item item : queue.getItems()) {
@@ -268,15 +269,12 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         }
     }
 
-    private void abortRunningJobsThatMatch(@Nonnull StashCause stashCause) {
+    private void abortPreviousRunningJobs(@Nonnull StashCause stashCause) {
         logger.fine("Looking for running jobs that match PR ID: " + stashCause.getPullRequestId());
-        for (Object o : job.getBuilds()) {
-            if (o instanceof Build) {
-                Build build = (Build) o;
-                if (build.isBuilding() && hasCauseFromTheSamePullRequest(build.getCauses(), stashCause)) {
-                    logger.info("Aborting build: " + build + " since PR is outdated");
-                    build.getExecutor().interrupt(Result.ABORTED);
-                }
+        for (Run run : job.getBuilds()) {
+            if (run.isBuilding() && hasCauseFromTheSamePullRequest(run.getCauses(), stashCause)) {
+                logger.info("Aborting build: " + run + " since PR is outdated");
+                run.getExecutor().interrupt(Result.ABORTED);
             }
         }
     }
@@ -286,8 +284,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             for (Cause cause : causes) {
                 if (cause instanceof StashCause) {
                     StashCause sc = (StashCause) cause;
-                    if (StringUtils.equals(sc.getPullRequestId(), pullRequestCause.getPullRequestId()) &&
-                            StringUtils.equals(sc.getSourceRepositoryName(), pullRequestCause.getSourceRepositoryName())) {
+                    if (StringUtils.equals(sc.getPullRequestId(), pullRequestCause.getPullRequestId())) {
                         return true;
                     }
                 }
