@@ -326,6 +326,8 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
                 public void run() {
                     try {
                         stashPullRequestsBuilder.run();
+                    } catch (Exception e) {
+                        logger.log(Level.WARNING, "Stash Pull Request Builder failed when checking for changes", e);
                     } finally {
                         checkAlreadyQueued.set(false);
                     }
