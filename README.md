@@ -1,6 +1,9 @@
 Stash Pull Request Builder Plugin
 ================================
 
+> ## This plugin is now maintained in the offical Jenkins org; https://github.com/jenkinsci/stash-pullrequest-builder-plugin Please direct all PRs there.
+> ## Issues can be raised here; https://issues.jenkins.io/browse/JENKINS-63802?jql=project%20%3D%20JENKINS%20AND%20component%20%3D%20stash-pullrequest-builder-plugin
+
 [![Join the chat at https://gitter.im/nemccarthy/stash-pullrequest-builder-plugin](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/nemccarthy/stash-pullrequest-builder-plugin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 This Jenkins plugin builds pull requests from a Atlassian Stash server and will report the test results as a comment.
