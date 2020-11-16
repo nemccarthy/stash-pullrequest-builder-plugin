@@ -127,10 +127,6 @@ These comments can contain environment variables that will be translated when po
 
 This feature can be used to post for instance a url to the deployed application or code coverage at a successful build and why the build failed like what tests that did not pass.
 
-## Copyright
-
-Copyright © 2015 Nathan McCarthy.
-
 
 ## License
 
