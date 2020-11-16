@@ -25,7 +25,10 @@ import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
+import hudson.util.DaemonThreadFactory;
+import hudson.util.ExceptionCatchingThreadFactory;
 import hudson.util.ListBoxModel;
+import hudson.util.NamingThreadFactory;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import net.sf.json.JSONObject;
@@ -41,6 +44,9 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -71,6 +77,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
     private final boolean cancelOutdatedJobsEnabled;
 
     transient private StashPullRequestsBuilder stashPullRequestsBuilder;
+    transient private AtomicBoolean checkAlreadyQueued;
 
     @Extension
     public static final StashBuildTriggerDescriptor descriptor = new StashBuildTriggerDescriptor();
@@ -202,6 +209,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             this.stashPullRequestsBuilder.setJob(job);
             this.stashPullRequestsBuilder.setTrigger(this);
             this.stashPullRequestsBuilder.setupBuilder();
+            this.checkAlreadyQueued = new AtomicBoolean(false);
         } catch(IllegalStateException e) {
             logger.log(Level.SEVERE, "Can't start trigger", e);
             return;
@@ -213,7 +221,7 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
         if (!(job instanceof ParameterizedJobMixIn.ParameterizedJob)) {
             return null;
         }
-        
+
         ParameterizedJobMixIn.ParameterizedJob pjob = (ParameterizedJobMixIn.ParameterizedJob) job;
 
         Trigger trigger = pjob.getTriggers().get(descriptor);
@@ -248,13 +256,13 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
             cancelPreviousJobsInQueueThatMatch(cause);
             abortRunningJobsThatMatch(cause);
         }
-        
+
         return new ParameterizedJobMixIn() {
             @Override
             protected Job asJob() {
                 return StashBuildTrigger.this.job;
             }
-        }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));        
+        }.scheduleBuild2(0, new ParametersAction(values), new CauseAction(cause));
     }
 
     private void cancelPreviousJobsInQueueThatMatch(@Nonnull StashCause stashCause) {
@@ -309,11 +317,24 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
 
     @Override
     public void run() {
-        if(!this.getBuilder().getJob().isBuildable()) {
+        if (!this.getBuilder().getJob().isBuildable()) {
             logger.info(format("Build Skip (%s).", getBuilder().getJob().getName()));
-        } else {
+        } else if(checkAlreadyQueued.compareAndSet(false, true)) {
             logger.info(format("Build started (%s).", getBuilder().getJob().getName()));
-            this.stashPullRequestsBuilder.run();
+            descriptor.getExecutorService().execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        stashPullRequestsBuilder.run();
+                    } catch (Exception e) {
+                        logger.log(Level.WARNING, "Stash Pull Request Builder failed when checking for changes", e);
+                    } finally {
+                        checkAlreadyQueued.set(false);
+                    }
+                }
+            });
+        } else {
+            logger.info(format("Build check already queued - skipping (%s).", getBuilder().getJob().getName()));
         }
         this.getDescriptor().save();
     }
@@ -336,8 +357,20 @@ public class StashBuildTrigger extends Trigger<Job<?, ?>> {
     }
 
     public static final class StashBuildTriggerDescriptor extends TriggerDescriptor {
+
+        private transient final ExecutorService executorService;
+
         public StashBuildTriggerDescriptor() {
+            executorService = Executors.newFixedThreadPool(
+                    10,
+                    new ExceptionCatchingThreadFactory(
+                            new NamingThreadFactory(new DaemonThreadFactory(), "StashBuildTriggerDescriptor.executorService")));
             load();
+        }
+
+        @Nonnull
+        public ExecutorService getExecutorService() {
+            return executorService;
         }
 
         @Override
