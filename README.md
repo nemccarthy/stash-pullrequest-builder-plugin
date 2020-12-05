@@ -103,7 +103,7 @@ fi
 ```
 
 ## Notify Stash of build result
-If you are using the [StashNotifier plugin](https://wiki.jenkins-ci.org/display/JENKINS/StashNotifier+Plugin) and have enabled the 'Notify Stash Instance' Post-build Action while building the merged PR, you need to set `${sourceCommitHash}` as Commit SHA-1 to record the build result against the source commit.
+If you are using the [StashNotifier plugin](https://wiki.jenkins.io/display/JENKINS/Bitbucket+%28Stash%29+Notifier+Plugin) and have enabled the 'Notify Stash Instance' Post-build Action while building the merged PR, you need to set `${sourceCommitHash}` as Commit SHA-1 to record the build result against the source commit.
 
 ## Rerun test builds
 
