@@ -34,6 +34,9 @@
     <f:entry title="Merge PR if build is successful" field="mergeOnSuccess">
         <f:checkbox default="false"/>
     </f:entry>
+    <f:entry title="Disable build comments" field="disableBuildComments">
+      <f:checkbox default="false"/>
+    </f:entry>
     <f:entry title="Keep PR comment only for most recent Build" field="deletePreviousBuildFinishComments">
       <f:checkbox default="false"/>
     </f:entry>

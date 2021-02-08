@@ -44,50 +44,46 @@ public class StashBuilds {
     }
 
     public void onCompleted(Run run, TaskListener listener) {
+        StashBuildTrigger trig = StashBuildTrigger.getTrigger(run.getParent());
         StashCause cause = this.getCause(run);
+
         if (cause == null) {
             return;
         }
-        Result result = run.getResult();
-        JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
-        String rootUrl = globalConfig.getUrl();
-        String buildUrl = "";
-        if (rootUrl == null) {
-            buildUrl = " PLEASE SET JENKINS ROOT URL FROM GLOBAL CONFIGURATION " + run.getUrl();
-        }
-        else {
-            buildUrl = rootUrl + run.getUrl();
-        }
-        repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
 
-        String additionalComment = "";
+        // Add Comment
+        if (!trig.isDisableBuildComments()) {
+            JenkinsLocationConfiguration globalConfig = new JenkinsLocationConfiguration();
+            String rootUrl = globalConfig.getUrl();
+            String buildUrl = (rootUrl != null ? rootUrl : " PLEASE SET JENKINS ROOT URL FROM GLOBAL CONFIGURATION ") + run.getUrl();
+            Result result = run.getResult();
+            String comment = "";
 
-        StashPostBuildCommentAction comments = run.getAction(StashPostBuildCommentAction.class);
-        if(comments != null) {
-            String buildComment = result == Result.SUCCESS ? comments.getBuildSuccessfulComment() : comments.getBuildFailedComment();
+            StashPostBuildCommentAction additionalComments = run.getAction(StashPostBuildCommentAction.class);
+            if (additionalComments != null) {
+                String buildComment = result == Result.SUCCESS ? additionalComments.getBuildSuccessfulComment() : additionalComments.getBuildFailedComment();
 
-            if(buildComment != null && !buildComment.isEmpty()) {
-              additionalComment = "\n\n" + buildComment;
+                if (buildComment != null && !buildComment.isEmpty()) {
+                    comment = "\n\n" + buildComment;
+                }
             }
+
+            String duration = run.getDurationString();
+            repository.deletePullRequestComment(cause.getPullRequestId(), cause.getBuildStartCommentId());
+            repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
+                    cause.getDestinationCommitHash(), result, buildUrl,
+                    run.getNumber(), comment, duration);
         }
-        String duration = run.getDurationString();
-        repository.postFinishedComment(cause.getPullRequestId(), cause.getSourceCommitHash(),
-                cause.getDestinationCommitHash(), result, buildUrl,
-                run.getNumber(), additionalComment, duration);
 
         //Merge PR
-        StashBuildTrigger trig = StashBuildTrigger.getTrigger(run.getParent());
-        if(trig.getMergeOnSuccess() && run.getResult() == Result.SUCCESS) {
+        if (trig.getMergeOnSuccess() && run.getResult() == Result.SUCCESS) {
             boolean mergeStat = repository.mergePullRequest(cause.getPullRequestId(), cause.getPullRequestVersion());
-            if(mergeStat == true)
-            {
+            if (mergeStat == true) {
                 String logmsg = "Merged pull request " + cause.getPullRequestId() + "(" +
                         cause.getSourceBranch() + ") to branch " + cause.getTargetBranch();
                 logger.log(Level.INFO, logmsg);
                 listener.getLogger().println(logmsg);
-            }
-            else
-            {
+            } else {
                 String logmsg = "Failed to merge pull request " + cause.getPullRequestId() + "(" +
                         cause.getSourceBranch() + ") to branch " + cause.getTargetBranch() +
                         " because it's out of date";

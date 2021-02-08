@@ -1,7 +1,12 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.model.Cause;
+import hudson.model.Job;
+import hudson.model.Queue;
 import hudson.model.Result;
+import hudson.model.Run;
+import jenkins.model.Jenkins;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashApiClient;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestComment;
 import stashpullrequestbuilder.stashpullrequestbuilder.stash.StashPullRequestMergableResponse;
@@ -36,7 +41,7 @@ public class StashRepository {
     public static final String BUILD_FINISH_SENTENCE = BUILD_FINISH_MARKER + " %n%n **[%s](%s)** - Build *#%d* which took *%s*";
     public static final String BUILD_START_SENTENCE = BUILD_START_MARKER + " %n%n **[%s](%s)** - Build *#%d*";
 
-    public static final String BUILD_SUCCESS_COMMENT =  "✓ BUILD SUCCESS";
+    public static final String BUILD_SUCCESS_COMMENT = "✓ BUILD SUCCESS";
     public static final String BUILD_FAILURE_COMMENT = "✕ BUILD FAILURE";
     public static final String BUILD_RUNNING_COMMENT = "BUILD RUNNING...";
     public static final String BUILD_UNSTABLE_COMMENT = "⁉ BUILD UNSTABLE";
@@ -67,16 +72,16 @@ public class StashRepository {
                 trigger.isIgnoreSsl());
     }
 
-    public Collection<StashPullRequestResponseValue> getTargetPullRequests() {
-        logger.info(format("Fetch PullRequests (%s).", builder.getJob().getName()));
+    public Collection<StashPullRequestResponseValue> getBuildablePullRequests() {
+        logger.finer(format("%s: Fetch pull requests.", builder.getJob().getName()));
         List<StashPullRequestResponseValue> pullRequests = client.getPullRequests();
-        List<StashPullRequestResponseValue> targetPullRequests = new ArrayList<StashPullRequestResponseValue>();
-        for(StashPullRequestResponseValue pullRequest : pullRequests) {
-            if (isBuildTarget(pullRequest)) {
-                targetPullRequests.add(pullRequest);
+        List<StashPullRequestResponseValue> buildablePullRequests = new ArrayList<StashPullRequestResponseValue>();
+        for (StashPullRequestResponseValue pullRequest : pullRequests) {
+            if (isBuildable(pullRequest)) {
+                buildablePullRequests.add(pullRequest);
             }
         }
-        return targetPullRequests;
+        return buildablePullRequests;
     }
 
     public String postBuildStartCommentTo(StashPullRequestResponseValue pullRequest) {
@@ -87,54 +92,52 @@ public class StashRepository {
         return commentResponse.getCommentId().toString();
     }
 
-    public static AbstractMap.SimpleEntry<String,String> getParameter(String content){
-    	if(content.isEmpty()){
-    		return null;
-    	}
+    public static AbstractMap.SimpleEntry<String, String> getParameter(String content) {
+        if (content == null || content.isEmpty()) {
+            return null;
+        }
         Matcher parameterMatcher = ADDITIONAL_PARAMETER_REGEX_PATTERN.matcher(content);
-        if(parameterMatcher.find(0)){
-        	String parameterName = parameterMatcher.group(1);
-        	String parameterValue = parameterMatcher.group(3);
-        	return new AbstractMap.SimpleEntry<String,String>(parameterName, parameterValue);
+        if (parameterMatcher.find(0)) {
+            String parameterName = parameterMatcher.group(1);
+            String parameterValue = parameterMatcher.group(3);
+            return new AbstractMap.SimpleEntry<String, String>(parameterName, parameterValue);
         }
         return null;
     }
 
-    public static Map<String, String> getParametersFromContent(String content){
+    public static Map<String, String> getParametersFromContent(String content) {
         Map<String, String> result = new TreeMap<String, String>();
-		String lines[] = content.split("\\r?\\n|\\r");
-		for(String line : lines){
-			AbstractMap.SimpleEntry<String,String> parameter = getParameter(line);
-			if(parameter != null){
-				result.put(parameter.getKey(), parameter.getValue());
-			}
-		}
+        String lines[] = content.split("\\r?\\n|\\r");
+        for (String line : lines) {
+            AbstractMap.SimpleEntry<String, String> parameter = getParameter(line);
+            if (parameter != null) {
+                result.put(parameter.getKey(), parameter.getValue());
+            }
+        }
 
         return result;
-   }
+    }
 
-    public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest){
+    public Map<String, String> getAdditionalParameters(StashPullRequestResponseValue pullRequest) {
         StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
-        String owner = destination.getRepository().getProjectName();
         String repositoryName = destination.getRepository().getRepositoryName();
+        String owner = destination.getRepository().getProjectName();
 
         String id = pullRequest.getId();
         List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
         if (comments != null) {
             Collections.sort(comments);
-//          Collections.reverse(comments);
 
             Map<String, String> result = new TreeMap<String, String>();
-
             for (StashPullRequestComment comment : comments) {
                 String content = comment.getText();
                 if (content == null || content.isEmpty()) {
                     continue;
                 }
 
-                Map<String,String> parameters = getParametersFromContent(content);
-                for(String key : parameters.keySet()){
-                	result.put(key, parameters.get(key));
+                Map<String, String> parameters = getParametersFromContent(content);
+                for (String key : parameters.keySet()) {
+                    result.put(key, parameters.get(key));
                 }
             }
             return result;
@@ -142,35 +145,111 @@ public class StashRepository {
         return null;
     }
 
-    public void addFutureBuildTasks(Collection<StashPullRequestResponseValue> pullRequests) {
-        for(StashPullRequestResponseValue pullRequest : pullRequests) {
-        	Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
+    public void buildPullRequests(Collection<StashPullRequestResponseValue> pullRequests) {
+        for (StashPullRequestResponseValue pullRequest : pullRequests) {
+            StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+            String pullRequestId = pullRequest.getId();
+            String sourceCommitId = pullRequest.getFromRef().getLatestCommit();
+            String targetCommitId = pullRequest.getToRef().getLatestCommit();
+            String repositoryName = destination.getRepository().getRepositoryName();
+            String owner = destination.getRepository().getProjectName();
+            String prefixLog = owner + "/" + repositoryName + " #" + pullRequestId + ": ";
+            long lastTimestamp = pullRequest.getLastCommentTimestamp();
+
+            synchronized (this) {
+                if (isBuiltCause(pullRequestId, sourceCommitId, trigger.getCheckDestinationCommit() ? targetCommitId : null, lastTimestamp)) {
+                    logger.fine(prefixLog + "Built already - ignoring...");
+                    continue;
+                }
+
+                Map<String, String> additionalParameters = getAdditionalParameters(pullRequest);
                 if (trigger.getDeletePreviousBuildFinishComments()) {
+                    logger.fine(prefixLog + "Delete previous build comments");
                     deletePreviousBuildFinishedComments(pullRequest);
                 }
-            String commentId = postBuildStartCommentTo(pullRequest);
-            StashCause cause = new StashCause(
-                    trigger.getStashHost(),
-                    pullRequest.getFromRef().getBranch().getName(),
-                    pullRequest.getToRef().getBranch().getName(),
-                    pullRequest.getFromRef().getRepository().getProjectName(),
-                    pullRequest.getFromRef().getRepository().getRepositoryName(),
-                    pullRequest.getId(),
-                    pullRequest.getToRef().getRepository().getProjectName(),
-                    pullRequest.getToRef().getRepository().getRepositoryName(),
-                    pullRequest.getTitle(),
-                    pullRequest.getFromRef().getLatestCommit(),
-                    pullRequest.getToRef().getLatestCommit(),
-                    commentId,
-                    pullRequest.getVersion(),
-                    additionalParameters);
-            this.builder.getTrigger().startJob(cause);
 
+                String commentId = null;
+                if (!trigger.isDisableBuildComments()) {
+                    logger.fine(prefixLog + "Post comment for start building");
+                    commentId = postBuildStartCommentTo(pullRequest);
+                }
+
+                StashCause cause = new StashCause(
+                        trigger.getStashHost(),
+                        pullRequest.getFromRef().getBranch().getName(),
+                        pullRequest.getToRef().getBranch().getName(),
+                        pullRequest.getFromRef().getRepository().getProjectName(),
+                        pullRequest.getFromRef().getRepository().getRepositoryName(),
+                        pullRequestId,
+                        owner,
+                        repositoryName,
+                        pullRequest.getTitle(),
+                        sourceCommitId,
+                        targetCommitId,
+                        commentId,
+                        lastTimestamp,
+                        pullRequest.getVersion(),
+                        additionalParameters);
+
+                if (this.builder.getTrigger().startJob(cause) != null) {
+                    logger.info(prefixLog + "Start build pull request");
+                }
+            }
         }
     }
 
+    private boolean isBuiltCause(String pullRequestId, String sourceCommitId, String targetCommitId, long lastTimestamp) {
+        Jenkins jenkins = Jenkins.getInstance();
+        Job<?, ?> job = builder.getJob();
+
+        if (jenkins != null) {
+            Queue queue = jenkins.getQueue();
+            for (Queue.Item item : queue.getItems()) {
+                if (item != null && item.task.getOwnerTask().getName().equals(job.getName())) {
+                    StashCause sc = getStashCause(item.getCauses(), pullRequestId, sourceCommitId);
+                    if (sc != null) {
+                        return targetCommitId == null || sc.getDestinationCommitHash().equalsIgnoreCase(targetCommitId);
+                    }
+                }
+            }
+
+            Run<?, ?> run = job.getLastBuild();
+            while (run != null) {
+                logger.finest("PR #" + pullRequestId + ": Analyze build cause: " + run.toString());
+                StashCause sc = getStashCause(run.getCauses(), pullRequestId, sourceCommitId);
+                if (sc != null && sc.getBuildLastTimestamp() >= lastTimestamp) {
+                    return targetCommitId == null || sc.getDestinationCommitHash().equalsIgnoreCase(targetCommitId);
+                }
+                run = run.getPreviousBuild();
+            }
+        }
+
+        return false;
+    }
+
+    private StashCause getStashCause(Collection<Cause> causes, String pullRequestId, String sourceCommitId) {
+        String prefixLog = "PR #" + pullRequestId + ": ";
+        if (causes != null) {
+            for (Cause cause : causes) {
+                if (cause instanceof StashCause) {
+                    StashCause sc = (StashCause) cause;
+                    logger.finer(prefixLog + "Found stash cause: " + sc.toString());
+                    if (sc.getPullRequestId().equalsIgnoreCase(pullRequestId) &&
+                            sc.getSourceCommitHash().equalsIgnoreCase(sourceCommitId)) {
+                        return sc;
+                    }
+                } else {
+                    logger.finest(prefixLog + "Found cause: " + cause.getClass().getName());
+                }
+            }
+        }
+        return null;
+    }
+
     public void deletePullRequestComment(String pullRequestId, String commentId) {
-        this.client.deletePullRequestComment(pullRequestId, commentId);
+        if (pullRequestId != null && commentId != null) {
+            this.client.deletePullRequestComment(pullRequestId, commentId);
+        }
     }
 
     private String getMessageForBuildResult(Result result) {
@@ -190,7 +269,7 @@ public class StashRepository {
         return message;
     }
 
-    public void postFinishedComment(String pullRequestId, String sourceCommit,  String destinationCommit, Result buildResult, String buildUrl, int buildNumber, String additionalComment, String duration) {
+    public void postFinishedComment(String pullRequestId, String sourceCommit, String destinationCommit, Result buildResult, String buildUrl, int buildNumber, String additionalComment, String duration) {
         String message = getMessageForBuildResult(buildResult);
         String comment = format(BUILD_FINISH_SENTENCE, builder.getJob().getDisplayName(), sourceCommit, destinationCommit, message, buildUrl, buildNumber, duration);
 
@@ -199,8 +278,7 @@ public class StashRepository {
         this.client.postPullRequestComment(pullRequestId, comment);
     }
 
-    public boolean mergePullRequest(String pullRequestId, String version)
-    {
+    public boolean mergePullRequest(String pullRequestId, String version) {
         return this.client.mergePullRequest(pullRequestId, version);
     }
 
@@ -218,7 +296,6 @@ public class StashRepository {
     }
 
     private void deletePreviousBuildFinishedComments(StashPullRequestResponseValue pullRequest) {
-
         StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
         String owner = destination.getRepository().getProjectName();
         String repositoryName = destination.getRepository().getRepositoryName();
@@ -228,128 +305,79 @@ public class StashRepository {
 
         if (comments != null) {
             Collections.sort(comments);
-                Collections.reverse(comments);
-                for (StashPullRequestComment comment : comments) {
-                    String content = comment.getText();
-                    if (content == null || content.isEmpty()) {
-                        continue;
-                    }
-
-                    String project_build_finished = format(BUILD_FINISH_REGEX, builder.getJob().getDisplayName());
-                    Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
-
-                    if (finishMatcher.find()) {
-                        deletePullRequestComment(pullRequest.getId(), comment.getCommentId().toString());
-                    }
+            Collections.reverse(comments);
+            for (StashPullRequestComment comment : comments) {
+                String content = comment.getText();
+                if (content == null || content.isEmpty()) {
+                    continue;
                 }
+
+                String project_build_finished = format(BUILD_FINISH_REGEX, builder.getJob().getDisplayName());
+                Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
+
+                if (finishMatcher.find()) {
+                    deletePullRequestComment(pullRequest.getId(), comment.getCommentId().toString());
+                }
+            }
         }
     }
 
-    private boolean isBuildTarget(StashPullRequestResponseValue pullRequest) {
+    private boolean isBuildable(StashPullRequestResponseValue pullRequest) {
+        if (pullRequest == null || pullRequest.getState() == null || !pullRequest.getState().equals("OPEN")) {
+            return false;
+        }
 
-        boolean shouldBuild = true;
+        String id = pullRequest.getId();
+        StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
+        String owner = destination.getRepository().getProjectName();
+        String repositoryName = destination.getRepository().getRepositoryName();
+        String logPrefix = owner + "/" + repositoryName + " #" + id + ": ";
+        boolean isOnlyBuildOnComment = trigger.isOnlyBuildOnComment();
+        boolean shouldBuild = !isOnlyBuildOnComment;
 
-        if (pullRequest.getState() != null && pullRequest.getState().equals("OPEN")) {
-            if (isSkipBuild(pullRequest.getTitle())) {
-                logger.info("Skipping PR: " + pullRequest.getId() + " as title contained skip phrase");
-                return false;
-            }
+        if (isSkipBuild(pullRequest.getTitle())) {
+            logger.fine(logPrefix + "Skipping PR as title contained skip phrase");
+            return false;
+        } else if (!isForTargetBranch(pullRequest)) {
+            logger.fine(logPrefix + "Skipping PR as targeting branch: " + destination.getBranch().getName());
+            return false;
+        } else if (!isPullRequestMergable(pullRequest)) {
+            logger.fine(logPrefix + "Skipping PR as cannot be merged");
+            return false;
+        }
 
-            if (!isForTargetBranch(pullRequest)) {
-                logger.info("Skipping PR: " + pullRequest.getId() + " as targeting branch: " + pullRequest.getToRef().getBranch().getName());
-                return false;
-            }
+        List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
+        if (comments != null) {
+            Collections.sort(comments);
+            Collections.reverse(comments);
 
-            if(!isPullRequestMergable(pullRequest)) {
-                logger.info("Skipping PR: " + pullRequest.getId() + " as cannot be merged");
-                return false;
-            }
+            for (StashPullRequestComment comment : comments) {
+                logger.finer(logPrefix + "Analyze PR comment " + comment.getCommentId() + " created at " + comment.getCreatedDate());
 
-            boolean isOnlyBuildOnComment = trigger.isOnlyBuildOnComment();
+                String content = comment.getText();
+                if (content == null || content.isEmpty()) {
+                    continue;
+                }
 
-            if (isOnlyBuildOnComment) {
-                shouldBuild = false;
-            }
-
-            String sourceCommit = pullRequest.getFromRef().getLatestCommit();
-
-            StashPullRequestResponseValueRepository destination = pullRequest.getToRef();
-            String owner = destination.getRepository().getProjectName();
-            String repositoryName = destination.getRepository().getRepositoryName();
-            String destinationCommit = destination.getLatestCommit();
-
-            String id = pullRequest.getId();
-            List<StashPullRequestComment> comments = client.getPullRequestComments(owner, repositoryName, id);
-
-            if (comments != null) {
-                Collections.sort(comments);
-                Collections.reverse(comments);
-                for (StashPullRequestComment comment : comments) {
-                    String content = comment.getText();
-                    if (content == null || content.isEmpty()) {
-                        continue;
-                    }
-
-                    //These will match any start or finish message -- need to check commits
-                    String escapedBuildName = Pattern.quote(builder.getJob().getDisplayName());
-                    String project_build_start = String.format(BUILD_START_REGEX, escapedBuildName);
-                    String project_build_finished = String.format(BUILD_FINISH_REGEX, escapedBuildName);
-                    Matcher startMatcher = Pattern.compile(project_build_start, Pattern.CASE_INSENSITIVE).matcher(content);
-                    Matcher finishMatcher = Pattern.compile(project_build_finished, Pattern.CASE_INSENSITIVE).matcher(content);
-
-                    if (startMatcher.find() ||
-                        finishMatcher.find()) {
-                        //in build only on comment, we should stop parsing comments as soon as a PR builder comment is found.
-                        if(isOnlyBuildOnComment) {
-                            assert !shouldBuild;
-                            break;
-                        }
-
-                        String sourceCommitMatch;
-                        String destinationCommitMatch;
-
-                        if (startMatcher.find(0)) {
-                            sourceCommitMatch = startMatcher.group(1);
-                            destinationCommitMatch = startMatcher.group(2);
-                        } else {
-                            sourceCommitMatch = finishMatcher.group(1);
-                            destinationCommitMatch = finishMatcher.group(2);
-                        }
-
-                        //first check source commit -- if it doesn't match, just move on. If it does, investigate further.
-                        if (sourceCommitMatch.equalsIgnoreCase(sourceCommit)) {
-                            // if we're checking destination commits, and if this doesn't match, then move on.
-                            if (this.trigger.getCheckDestinationCommit()
-                                    && (!destinationCommitMatch.equalsIgnoreCase(destinationCommit))) {
-                            	continue;
-                            }
-
-                            shouldBuild = false;
-                            break;
-                        }
-                    }
-
-                    if(isSkipBuild(content)) {
-                        shouldBuild = false;
-                        break;
-                    } if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
-                        shouldBuild = true;
-                        break;
-                    }
+                if (isSkipBuild(content)) {
+                    logger.fine(logPrefix + "Skipping PR as comment " + comment.getCommentId() + " contained skip phrase");
+                    return false;
+                } else if (isPhrasesContain(content, this.trigger.getCiBuildPhrases())) {
+                    logger.fine(logPrefix + "Building PR as comment " + comment.getCommentId() + " contained build phrase");
+                    pullRequest.setLastCommentTimestamp(comment.getCreatedDate());
+                    return true;
                 }
             }
         }
-        if (shouldBuild) {
-            logger.info("Building PR: " + pullRequest.getId());
-        }
+
         return shouldBuild;
     }
 
     private boolean isForTargetBranch(StashPullRequestResponseValue pullRequest) {
         String targetBranchesToBuild = this.trigger.getTargetBranchesToBuild();
-        if (targetBranchesToBuild !=null && !"".equals(targetBranchesToBuild)) {
+        if (targetBranchesToBuild != null && !"".equals(targetBranchesToBuild)) {
             String[] branches = targetBranchesToBuild.split(",");
-            for(String branch : branches) {
+            for (String branch : branches) {
                 if (pullRequest.getToRef().getBranch().getName().matches(branch.trim())) {
                     return true;
                 }
@@ -363,7 +391,7 @@ public class StashRepository {
         String skipPhrases = this.trigger.getCiSkipPhrases();
         if (skipPhrases != null && !"".equals(skipPhrases)) {
             String[] phrases = skipPhrases.split(",");
-            for(String phrase : phrases) {
+            for (String phrase : phrases) {
                 if (isPhrasesContain(pullRequestContentString, phrase)) {
                     return true;
                 }

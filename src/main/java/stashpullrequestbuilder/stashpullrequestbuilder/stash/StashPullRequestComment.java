@@ -13,6 +13,7 @@ public class StashPullRequestComment implements Comparable<StashPullRequestComme
 
     private Integer commentId;//
     private String text;
+    private long createdDate;
 
 
     @JsonProperty("id")
@@ -33,6 +34,13 @@ public class StashPullRequestComment implements Comparable<StashPullRequestComme
         this.text = text;
     }
 
+    public long getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(long createdDate) {
+        this.createdDate = createdDate;
+    }
 
     public int compareTo(StashPullRequestComment target) {
         if (this.getCommentId() > target.getCommentId()) {
