@@ -98,6 +98,17 @@
                 <target>1.6</target>
             </configuration>
         </plugin>
+        <plugin>
+            <groupId>org.jenkins-ci.tools</groupId>
+            <artifactId>maven-hpi-plugin</artifactId>
+            <extensions>true</extensions>
+            <configuration>
+                <showDeprecation>true</showDeprecation>
+                <contextPath>/jenkins</contextPath>
+                <disabledTestInjection>true</disabledTestInjection>
+                <!-- TODO specify ${java.level} when JENKINS-20679 implemented -->
+            </configuration>
+        </plugin>
     </plugins>
     </build>
 
