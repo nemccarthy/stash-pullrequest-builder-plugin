@@ -49,5 +49,11 @@
     <f:entry title="CI Build Phrases" field="ciBuildPhrases">
       <f:textbox default="test this please"/>
     </f:entry>
+    <f:entry title="Approve PR on build success" field="approveOnBuildSuccessful">
+      <f:checkbox default="false"/>
+    </f:entry>
+    <f:entry title="Mark PR with Needs Work on build failure" field="needsWorkOnBuildFailure">
+      <f:checkbox default="false"/>
+    </f:entry>
   </f:advanced>
 </j:jelly>

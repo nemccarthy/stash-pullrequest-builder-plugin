@@ -63,6 +63,8 @@ Select *Stash Pull Request Builder* then configure:
 - Only build when asked (with test phrase):
 - CI Build Phrases: default: "test this please"
 - Target branches: a comma separated list of branches (e.g. brancha,branchb)
+- Approve PR on build success: marks a pull request as Approved with the specified user. Make sure the user has sufficient rights to update the status of pull requests and the username is "slugified".
+- Mark PR with Needs Work on build failure: As above, but with failed builds. The same user requirements apply.
 
 ## Building the merge of Source Branch into Target Branch
 
@@ -70,7 +72,7 @@ You may want Jenkins to build the merged PR (that is the merge of `sourceBranch`
 
 If you are building the merged PR you probably want Jenkins to do a new build when the target branch changes. There is an advanced option in the build trigger, "Rebuild if destination branch changes?" which enables this.
 
-You probably also only want to build if the PR was mergeable and always without conflicts. There are advanced options in the build trigger for both of these. 
+You probably also only want to build if the PR was mergeable and always without conflicts. There are advanced options in the build trigger for both of these.
 
 **NOTE: *Always enable `Build only if Stash reports no conflicts` if using the merge RefSpec!*** This will make sure the lazy merge on stash has happened before the build is triggered.
 
