@@ -1,6 +1,9 @@
 package stashpullrequestbuilder.stashpullrequestbuilder;
 
+import hudson.EnvVars;
 import hudson.model.Cause;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -32,7 +35,7 @@ public class StashBuilds {
     }
 
     public void onStarted(Run run) {
-        StashCause cause = this.getCause(run);
+        StashCause cause = ExternalLaunchSupport.resolveOnStartedStashCause(this.getCause(run), repository, trigger, run);
         if (cause == null) {
             return;
         }
@@ -44,7 +47,7 @@ public class StashBuilds {
     }
 
     public void onCompleted(Run run, TaskListener listener) {
-        StashCause cause = this.getCause(run);
+        StashCause cause = ExternalLaunchSupport.resolveOnCompletedStashCause(this.getCause(run), run);
         if (cause == null) {
             return;
         }
