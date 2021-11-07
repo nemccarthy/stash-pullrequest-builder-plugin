@@ -22,6 +22,9 @@
     <f:entry title="Build PR targetting only these branches" field="targetBranchesToBuild">
       <f:textbox default="" />
     </f:entry>
+    <f:entry title="Build PR from these branches only" field="sourceBranchesToBuild">
+      <f:textbox default="" />
+    </f:entry>
     <f:entry title="Rebuild if destination branch changes" field="checkDestinationCommit">
       <f:checkbox />
     </f:entry>
